@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly STATION_ROOT=/opt/mpi-station
+readonly MIXXX_ROOT="$STATION_ROOT/external/mixxx-mk3"
+readonly MASCHINEPI_ROOT="$STATION_ROOT/external/maschinepi-te"
+readonly STATE_DIR=/var/lib/mpi-station
+readonly CACHE_DIR=/var/cache/mpi-station
+readonly USER_NAME=mpi
+
+log() {
+  printf '[mpi-station-first-boot] %s\n' "$*"
+}
+
+if [[ -e "$STATE_DIR/provisioned" ]]; then
+  log "already provisioned"
+  exit 0
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+install -d -m 755 "$STATE_DIR" "$CACHE_DIR"
+
+log "waiting for package network"
+for attempt in $(seq 1 12); do
+  if apt-get update; then
+    break
+  fi
+  [[ "$attempt" -lt 12 ]] || { log "apt update failed"; exit 1; }
+  sleep 10
+done
+
+log "installing shared, build, audio, and Mixxx runtime dependencies"
+apt-get install -y --no-install-recommends \
+  build-essential cmake ninja-build pkg-config git ca-certificates curl \
+  libusb-1.0-0 libusb-1.0-0-dev libasound2-dev libjack-jackd2-dev \
+  libcurl4-openssl-dev libfreetype6-dev libfontconfig1-dev \
+  libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxfixes-dev \
+  libxinerama-dev libxrandr-dev libxrender-dev libgl1-mesa-dev \
+  libglu1-mesa-dev mesa-common-dev ladspa-sdk \
+  xvfb openbox xdotool x11-xserver-utils dmz-cursor-theme \
+  sqlite3 pipewire pipewire-alsa pipewire-jack pipewire-pulse wireplumber \
+  zenity qrencode feh cifs-utils ffmpeg yt-dlp python3 \
+  libportaudio2 libportmidi0
+
+log "installing pinned Mixxx package"
+mixxx_deb="$MIXXX_ROOT/mixxx_2.6.0-beta-1_arm64.deb"
+[[ -f "$mixxx_deb" ]] || { log "missing $mixxx_deb"; exit 1; }
+if ! dpkg -i "$mixxx_deb"; then
+  apt-get -f install -y
+  dpkg -i "$mixxx_deb"
+fi
+
+log "building Mixxx MK3 screen tooling"
+cmake -S "$MIXXX_ROOT" -B "$CACHE_DIR/mixxx-build" \
+  -G Ninja -DCMAKE_BUILD_TYPE=Release -DCAPTURE_BACKEND=x11
+cmake --build "$CACHE_DIR/mixxx-build" \
+  --target mk3-screen-daemon mk3_cli -j"$(nproc)"
+install -m 755 "$CACHE_DIR/mixxx-build/screen-daemon/mk3-screen-daemon" \
+  /usr/local/bin/mk3-screen-daemon
+install -m 755 "$CACHE_DIR/mixxx-build/external/mpi-tools/mk3_cli/mk3_cli" \
+  /usr/local/bin/mk3
+
+if [[ ! -x /usr/local/bin/maschinepi ]]; then
+  log "building pinned MaschinePI application on the Pi"
+  cmake -S "$MASCHINEPI_ROOT" -B "$CACHE_DIR/maschinepi-build" \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DDEV_DESKTOP=OFF \
+    -DENABLE_TRACKTION=ON \
+    -DBUILD_TOOLS=OFF
+  cmake --build "$CACHE_DIR/maschinepi-build" --target maschinepi -j"$(nproc)"
+
+  maschinepi_binary=""
+  for candidate in \
+    "$CACHE_DIR/maschinepi-build/bin/maschinepi" \
+    "$CACHE_DIR/maschinepi-build/maschinepi_artefacts/Release/maschinepi" \
+    "$CACHE_DIR/maschinepi-build/maschinepi"; do
+    if [[ -x "$candidate" ]]; then
+      maschinepi_binary="$candidate"
+      break
+    fi
+  done
+  [[ -n "$maschinepi_binary" ]] || { log "MaschinePI build produced no binary"; exit 1; }
+  install -m 755 "$maschinepi_binary" /usr/local/bin/maschinepi
+else
+  log "using image-injected MaschinePI binary"
+fi
+
+log "configuring the shared runtime user and PipeWire"
+getent group audio >/dev/null || groupadd audio
+getent group pipewire >/dev/null || groupadd pipewire
+usermod -aG audio,pipewire,plugdev,video "$USER_NAME"
+loginctl enable-linger "$USER_NAME"
+systemctl --global enable pipewire.service pipewire.socket wireplumber.service
+
+log "installing Mixxx mapping, skin, and initial settings"
+install -d -o "$USER_NAME" -g "$USER_NAME" \
+  "/home/$USER_NAME/.mixxx/controllers" "/home/$USER_NAME/.mixxx/skins" \
+  "/home/$USER_NAME/Music" "/home/$USER_NAME/.config/openbox"
+install -m 644 "$MIXXX_ROOT/mapping/Native-Instruments-Maschine-MK3.hid.xml" \
+  "/home/$USER_NAME/.mixxx/controllers/"
+install -m 644 "$MIXXX_ROOT/mapping/Native-Instruments-Maschine-MK3.js" \
+  "/home/$USER_NAME/.mixxx/controllers/"
+rm -rf "/home/$USER_NAME/.mixxx/skins/MK3"
+cp -a "$MIXXX_ROOT/skin/MK3" "/home/$USER_NAME/.mixxx/skins/MK3"
+
+cat > "/home/$USER_NAME/.mixxx/mixxx.cfg" <<'EOF'
+[Config]
+ResizableSkin MK3
+StartInFullscreen 1
+hide_menubar 1
+show_menubar_hint 0
+
+[Library]
+RescanOnStartup 1
+EOF
+
+cat > "/home/$USER_NAME/.mixxx/soundconfig.xml" <<'EOF'
+<!DOCTYPE SoundManagerConfig>
+<SoundManagerConfig api="JACK Audio Connection Kit" deck_count="2" force_network_clock="0" latency="5" samplerate="48000" sync_buffers="2">
+ <SoundDevice name="Maschine MK3 Analog Surround 4.0" portAudioIndex="6">
+  <output channel="0" channel_count="2" index="0" type="Master"/>
+ </SoundDevice>
+ <SoundDevice name="Built-in Audio Stereo" portAudioIndex="3">
+  <output channel="0" channel_count="2" index="0" type="Headphones"/>
+ </SoundDevice>
+</SoundManagerConfig>
+EOF
+
+cat > "/home/$USER_NAME/.config/openbox/rc.xml" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <applications>
+    <application name="*">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <fullscreen>yes</fullscreen>
+    </application>
+  </applications>
+</openbox_config>
+EOF
+
+sqlite3 "/home/$USER_NAME/.mixxx/mixxxdb.sqlite" \
+  'CREATE TABLE IF NOT EXISTS directories (directory TEXT UNIQUE);'
+sqlite3 "/home/$USER_NAME/.mixxx/mixxxdb.sqlite" \
+  "INSERT OR IGNORE INTO directories (directory) VALUES ('/home/$USER_NAME/Music');"
+chown -R "$USER_NAME:$USER_NAME" "/home/$USER_NAME/.mixxx" "/home/$USER_NAME/.config" "/home/$USER_NAME/Music"
+
+log "preparing Mixxx boot splash frames"
+install -d -m 755 /var/lib/mk3-bootsplash
+if [[ -f "$MIXXX_ROOT/pi-setup/bootsplash-left-anim.gif" ]]; then
+  ffmpeg -v error -i "$MIXXX_ROOT/pi-setup/bootsplash-left-anim.gif" \
+    -pix_fmt rgb565le -s 480x272 -f rawvideo \
+    /var/lib/mk3-bootsplash/all_frames.raw || true
+  if [[ -s /var/lib/mk3-bootsplash/all_frames.raw ]]; then
+    frame_bytes=$((480 * 272 * 2))
+    frame_count=$(($(stat -c%s /var/lib/mk3-bootsplash/all_frames.raw) / frame_bytes))
+    for ((frame = 0; frame < frame_count; frame++)); do
+      dd if=/var/lib/mk3-bootsplash/all_frames.raw \
+        of="/var/lib/mk3-bootsplash/frame_${frame}.raw" \
+        bs="$frame_bytes" skip="$frame" count=1 status=none
+    done
+    rm -f /var/lib/mk3-bootsplash/all_frames.raw
+  fi
+fi
+
+log "ensuring only mode targets own application startup"
+systemctl disable \
+  maschinepi.service mk3-boot-display.service mk3-boot-listener.service \
+  xvfb.service openbox.service mk3-bootsplash.service mk3-screen-daemon.service \
+  mixxx.service mk3-t9-daemon.service mk3-mouse-daemon.service \
+  mk3-overlay.service mk3-headphone-mirror.service 2>/dev/null || true
+systemctl daemon-reload
+
+apt-get clean
+rm -rf /var/lib/apt/lists/* "$CACHE_DIR/mixxx-build" "$CACHE_DIR/maschinepi-build"
+touch "$STATE_DIR/provisioned"
+sync
+
+log "provisioning complete; rebooting into the stored mode"
+systemctl --no-block reboot
+while :; do sleep 60; done

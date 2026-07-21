@@ -47,8 +47,17 @@ keeps both modes on a reproducible, known-good combination.
 
 ## Status
 
-Phase 1 (libmk3 unification) is complete. Phase 2 establishes this integrator
-scaffold. See `docs/plans/` for the roadmap and
+Phase 1 (libmk3 unification) and Phase 2 (integrator scaffold) are complete.
+The Phase 2b image injector and Phase 3 systemd modes are implemented and await
+image/Raspberry Pi 4 validation. Run the host-side checks with:
+
+```bash
+./tests/test-systemd-modes.sh
+./tests/test-install-rootfs.sh
+```
+
+Build and hardware instructions are in `docs/hardware-test.md`. See
+`docs/plans/` for the roadmap and
 `docs/specs/2026-07-21-mk3-dual-mode-shared-base-design.md` for the full design.
 
 `external/mixxx-mk3` currently points at `e80d138` from branch
