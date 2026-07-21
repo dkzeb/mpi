@@ -2,7 +2,7 @@
 Description=Divide SD-card remainder between Mixxx and MaschinePI data
 DefaultDependencies=no
 After=systemd-remount-fs.service
-Before=local-fs.target
+Before=home-mpi-Music.mount home-mpi-maschinepi-samples.mount local-fs.target
 ConditionPathExists=!/var/lib/mpi-station/data-layout-ready
 
 [Service]

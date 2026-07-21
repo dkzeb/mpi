@@ -62,6 +62,8 @@ grep -q 'xsetroot -cursor_name left_ptr' "$units/openbox.service"
 grep -q '^Before=mixxx.service .*mk3-overlay.service$' \
   "$units/mk3-hid-rebind.service"
 grep -q 'mk3-hid-rebind.service' "$units/mixxx.target"
+grep -q '^Before=home-mpi-Music.mount home-mpi-maschinepi-samples.mount local-fs.target$' \
+  "$units/mpi-prepare-data.service"
 
 if rg -n 'XDG_RUNTIME_DIR=/run/user/%U|PIPEWIRE_RUNTIME_DIR=/run/user/%U' \
     "$units"/*.service; then
