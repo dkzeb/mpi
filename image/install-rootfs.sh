@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage: install-rootfs.sh --root ROOT --boot BOOT --release-tree DIR
-                         [--maschinepi-binary FILE] [--password PASSWORD]
+                         [--artifacts-dir DIR] [--password PASSWORD]
 EOF
   exit 2
 }
@@ -12,7 +12,7 @@ EOF
 root=""
 boot=""
 release_tree=""
-maschinepi_binary=""
+artifacts_dir=""
 password="maschinepi"
 
 while [[ $# -gt 0 ]]; do
@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
     --root) root="$2"; shift 2 ;;
     --boot) boot="$2"; shift 2 ;;
     --release-tree) release_tree="$2"; shift 2 ;;
-    --maschinepi-binary) maschinepi_binary="$2"; shift 2 ;;
+    --artifacts-dir) artifacts_dir="$2"; shift 2 ;;
     --password) password="$2"; shift 2 ;;
     *) usage ;;
   esac
@@ -38,21 +38,74 @@ install -m 644 "$repo_root"/systemd/*.service "$repo_root"/systemd/*.target \
 install -m 755 "$repo_root/scripts/mpi-mode-select" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-mode-switch" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-audio-profile" "$root/usr/local/sbin/"
+install -m 755 "$repo_root/scripts/mpi-rebind-mk3-hid" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-configure-mixxx-controller" "$root/usr/local/sbin/"
-install -m 755 "$repo_root/image/mpi-station-first-boot" \
-  "$root/usr/local/sbin/mpi-station-first-boot"
+install -m 755 "$repo_root/image/provision-rootfs" \
+  "$root/usr/local/sbin/mpi-station-provision-rootfs"
 
-if [[ -n "$maschinepi_binary" ]]; then
-  [[ -f "$maschinepi_binary" ]] || { echo "Missing MaschinePI binary: $maschinepi_binary" >&2; exit 1; }
-  file "$maschinepi_binary" | grep -Eq 'ARM aarch64|ARM64' || {
-    echo "MaschinePI binary is not ARM64: $(file "$maschinepi_binary")" >&2
-    exit 1
-  }
-  install -D -m 755 "$maschinepi_binary" "$root/usr/local/bin/maschinepi"
+if [[ -n "$artifacts_dir" ]]; then
+  for artifact in maschinepi mk3-screen-daemon mk3 mk3-mode-selector; do
+    [[ -f "$artifacts_dir/$artifact" ]] || {
+      echo "Missing host-built artifact: $artifacts_dir/$artifact" >&2
+      exit 1
+    }
+    file "$artifacts_dir/$artifact" | grep -Eq 'ARM aarch64|ARM64' || {
+      echo "Artifact is not ARM64: $(file "$artifacts_dir/$artifact")" >&2
+      exit 1
+    }
+  done
+  install -D -m 755 "$artifacts_dir/maschinepi" "$root/usr/local/bin/maschinepi"
+  install -D -m 755 "$artifacts_dir/mk3-screen-daemon" \
+    "$root/usr/local/bin/mk3-screen-daemon"
+  install -D -m 755 "$artifacts_dir/mk3" "$root/usr/local/bin/mk3"
+  install -D -m 755 "$artifacts_dir/mk3-mode-selector" \
+    "$root/usr/local/sbin/mk3-mode-selector"
 fi
 
 install -d -m 755 "$root/var/lib/mk3-mode" "$root/var/lib/mpi-station"
 install -m 644 "$repo_root/config/mk3-mode.conf" "$root/var/lib/mk3-mode/config"
+openssl passwd -6 "$password" > "$root/var/lib/mpi-station/password.hash"
+chmod 600 "$root/var/lib/mpi-station/password.hash"
+
+install -d -m 755 \
+  "$root/home/mpi/.mixxx/controllers" "$root/home/mpi/.mixxx/skins" \
+  "$root/home/mpi/.config/openbox" "$root/home/mpi/Music" \
+  "$root/home/mpi/maschinepi/samples" "$root/home/mpi/maschinepi/projects"
+install -m 644 "$release_tree/external/mixxx-mk3/mapping/Native-Instruments-Maschine-MK3.hid.xml" \
+  "$root/home/mpi/.mixxx/controllers/"
+install -m 644 "$release_tree/external/mixxx-mk3/mapping/Native-Instruments-Maschine-MK3.js" \
+  "$root/home/mpi/.mixxx/controllers/"
+cp -a "$release_tree/external/mixxx-mk3/skin/MK3" "$root/home/mpi/.mixxx/skins/MK3"
+install -m 644 "$release_tree/config/mixxx-soundconfig.xml" \
+  "$root/home/mpi/.mixxx/soundconfig.xml"
+cat > "$root/home/mpi/.mixxx/mixxx.cfg" <<'EOF'
+[Config]
+ResizableSkin MK3
+StartInFullscreen 1
+hide_menubar 1
+show_menubar_hint 0
+
+[Library]
+RescanOnStartup 1
+EOF
+cat > "$root/home/mpi/.config/openbox/rc.xml" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <applications>
+    <application name="*">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <fullscreen>yes</fullscreen>
+    </application>
+  </applications>
+</openbox_config>
+EOF
+cat > "$root/home/mpi/maschinepi/maschinepi.conf" <<'EOF'
+# MaschinePI configuration installed by mpi-station
+samples_dir=/home/mpi/maschinepi/samples
+projects_dir=/home/mpi/maschinepi/projects
+EOF
+chown -R 1000:1000 "$root/home/mpi"
 
 install -d -m 755 "$root/etc/sysctl.d" "$root/etc/udev/rules.d"
 cat > "$root/etc/sysctl.d/99-realtime-audio.conf" <<'EOF'
@@ -63,11 +116,10 @@ kernel.sched_rt_runtime_us=-1
 EOF
 cat > "$root/etc/udev/rules.d/99-mk3-controller.rules" <<'EOF'
 SUBSYSTEM=="usb", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1600", MODE="0664", GROUP="audio"
+KERNEL=="hidraw*", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1600", MODE="0660", GROUP="audio"
 EOF
 
 install -d -m 755 "$root/etc/systemd/system/multi-user.target.wants"
-ln -sfn /etc/systemd/system/mpi-station-first-boot.service \
-  "$root/etc/systemd/system/multi-user.target.wants/mpi-station-first-boot.service"
 ln -sfn /lib/systemd/system/ssh.service \
   "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
 ln -sfn /etc/systemd/system/mode-selector.target "$root/etc/systemd/system/default.target"
@@ -77,8 +129,6 @@ if [[ -f "$root/etc/hosts" ]]; then
   sed -i -E 's/([[:space:]])raspberrypi([[:space:]]|$)/\1mpi-station\2/g' "$root/etc/hosts"
 fi
 
-password_hash="$(openssl passwd -6 "$password")"
-printf 'mpi:%s\n' "$password_hash" > "$boot/userconf.txt"
 touch "$boot/ssh"
 
 echo "Installed mpi-station release into $root"

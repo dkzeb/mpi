@@ -1,0 +1,13 @@
+[Unit]
+Description=Restore the Maschine MK3 HID driver for Mixxx
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+Before=mixxx.service mk3-t9-daemon.service mk3-mouse-daemon.service mk3-overlay.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mpi-rebind-mk3-hid
+RemainAfterExit=yes
+
+[Install]
+WantedBy=mixxx.target

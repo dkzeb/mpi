@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+source_dir="$repo_root/external/mixxx-mk3"
+build_dir="${MPI_MIXXX_TOOLS_BUILD_DIR:-$repo_root/image/output/mixxx-tools-arm64-build}"
+output_dir="${MPI_MIXXX_TOOLS_OUTPUT_DIR:-$repo_root/image/output/mixxx-tools-arm64}"
+toolchain="$repo_root/cmake/mixxx-tools-aarch64-toolchain.cmake"
+sysroot="$repo_root/image/output/mixxx-arm64-sysroot/root"
+deb_dir="$repo_root/image/output/mixxx-arm64-sysroot/debs"
+
+for command_name in cmake ninja aarch64-linux-gnu-gcc pkg-config apt-get dpkg-deb; do
+  command -v "$command_name" >/dev/null || {
+    echo "Missing cross-build command: $command_name" >&2
+    exit 1
+  }
+done
+
+[[ -f "$source_dir/CMakeLists.txt" ]] || {
+  echo "Missing recursive Mixxx MK3 submodule checkout: $source_dir" >&2
+  exit 1
+}
+
+if [[ ! -f "$sysroot/usr/lib/aarch64-linux-gnu/libX11.so" ||
+      ! -f "$sysroot/usr/lib/aarch64-linux-gnu/libXext.so" ||
+      ! -f "$sysroot/usr/lib/aarch64-linux-gnu/libXfixes.so" ||
+      ! -f "$sysroot/usr/lib/aarch64-linux-gnu/libxcb.so.1" ||
+      ! -f "$sysroot/usr/lib/aarch64-linux-gnu/libbsd.so.0" ]]; then
+  mkdir -p "$deb_dir" "$sysroot"
+  (
+    cd "$deb_dir"
+    apt-get download \
+      libx11-6:arm64 libx11-dev:arm64 \
+      libxext6:arm64 libxext-dev:arm64 \
+      libxfixes3:arm64 libxfixes-dev:arm64 \
+      libxau6:arm64 libxcb1:arm64 libxdmcp6:arm64 \
+      libbsd0:arm64 libmd0:arm64
+    for package_file in ./*.deb; do
+      dpkg-deb -x "$package_file" "$sysroot"
+    done
+  )
+fi
+
+export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSROOT_DIR
+
+cmake -S "$source_dir" -B "$build_dir" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
+  -DMPI_ARM64_OVERLAY_ROOT="$sysroot" \
+  -DCMAKE_EXE_LINKER_FLAGS="-L$sysroot/usr/lib/aarch64-linux-gnu -Wl,-rpath-link,$sysroot/usr/lib/aarch64-linux-gnu" \
+  -DCAPTURE_BACKEND=x11 \
+  -DX11_X11_LIB="$sysroot/usr/lib/aarch64-linux-gnu/libX11.so" \
+  -DX11_Xext_LIB="$sysroot/usr/lib/aarch64-linux-gnu/libXext.so" \
+  -DX11_Xfixes_LIB="$sysroot/usr/lib/aarch64-linux-gnu/libXfixes.so"
+cmake --build "$build_dir" \
+  --target mk3-screen-daemon mk3_cli -j"${MPI_BUILD_JOBS:-$(nproc)}"
+
+install -D -m 755 "$build_dir/screen-daemon/mk3-screen-daemon" \
+  "$output_dir/mk3-screen-daemon"
+install -D -m 755 "$build_dir/external/mpi-tools/mk3_cli/mk3_cli" \
+  "$output_dir/mk3"
+
+for binary in "$output_dir/mk3-screen-daemon" "$output_dir/mk3"; do
+  file "$binary" | grep -Eq 'ARM aarch64|ARM64' || {
+    echo "Cross-build output is not ARM64: $(file "$binary")" >&2
+    exit 1
+  }
+  echo "ARM64 Mixxx helper: $binary"
+  file "$binary"
+done

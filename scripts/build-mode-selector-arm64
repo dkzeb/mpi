@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+build_dir="${MPI_SELECTOR_BUILD_DIR:-$repo_root/image/output/mode-selector-arm64-build}"
+output="${MPI_SELECTOR_BINARY:-$repo_root/image/output/mk3-mode-selector-arm64}"
+
+for command_name in cmake ninja aarch64-linux-gnu-gcc pkg-config; do
+  command -v "$command_name" >/dev/null || {
+    echo "Missing selector cross-build command: $command_name" >&2
+    exit 1
+  }
+done
+
+export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSROOT_DIR
+
+cmake -S "$repo_root/mode-selector" -B "$build_dir" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$repo_root/cmake/mixxx-tools-aarch64-toolchain.cmake"
+cmake --build "$build_dir" --target mk3-mode-selector -j"${MPI_BUILD_JOBS:-$(nproc)}"
+install -D -m 755 "$build_dir/mk3-mode-selector" "$output"
+
+file "$output" | grep -Eq 'ARM aarch64|ARM64' || {
+  echo "Selector cross-build output is not ARM64: $(file "$output")" >&2
+  exit 1
+}
+echo "ARM64 mode selector: $output"
+file "$output"

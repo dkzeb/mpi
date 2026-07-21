@@ -19,7 +19,8 @@ if command -v systemd-analyze >/dev/null; then
     usr/local/sbin/mpi-audio-profile \
     usr/local/sbin/mpi-configure-mixxx-controller \
     usr/local/sbin/mpi-mode-select \
-    usr/local/sbin/mpi-station-first-boot \
+    usr/local/sbin/mpi-rebind-mk3-hid \
+    usr/local/sbin/mk3-mode-selector \
     usr/local/bin/maschinepi \
     usr/local/bin/mk3-screen-daemon \
     usr/bin/Xvfb usr/bin/openbox usr/bin/xsetroot usr/bin/pw-jack usr/bin/python3 \
@@ -49,12 +50,23 @@ done
 for unit in \
   mixxx.service mixxx-audio-profile.service xvfb.service openbox.service \
   mk3-bootsplash.service mk3-screen-daemon.service mk3-t9-daemon.service \
-  mk3-mouse-daemon.service mk3-overlay.service mk3-headphone-mirror.service; do
+  mk3-mouse-daemon.service mk3-overlay.service mk3-headphone-mirror.service \
+  mk3-hid-rebind.service; do
   grep -q '^PartOf=mixxx.target$' "$units/$unit"
 done
 
 grep -q 'while systemctl is-active --quiet mk3-bootsplash.service' \
   "$units/mk3-screen-daemon.service"
+grep -q 'xsetroot -cursor_name left_ptr' "$units/openbox.service"
+grep -q '^Before=mixxx.service .*mk3-overlay.service$' \
+  "$units/mk3-hid-rebind.service"
+grep -q 'mk3-hid-rebind.service' "$units/mixxx.target"
+
+if rg -n 'XDG_RUNTIME_DIR=/run/user/%U|PIPEWIRE_RUNTIME_DIR=/run/user/%U' \
+    "$units"/*.service; then
+  echo "System services must use the provisioned mpi user's runtime directory" >&2
+  exit 1
+fi
 
 if rg -n '^WantedBy=multi-user.target$' "$units"/maschinepi.service "$units"/mixxx.service \
     "$units"/xvfb.service "$units"/openbox.service "$units"/mk3-*.service; then

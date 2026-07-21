@@ -1,8 +1,7 @@
 # Raspberry Pi 4 image and mode test
 
-This procedure validates the Phase 2b image and Phase 3 systemd targets on a
-Raspberry Pi 4 with a Maschine MK3. Phase 4's Shift/menu selector is not part of
-this test yet; mode selection is the stored default plus an SSH command.
+This procedure validates the complete host-built image, selector, and systemd
+targets on a Raspberry Pi 4 with a Maschine MK3.
 
 ## 1. Build the image
 
@@ -15,14 +14,14 @@ Download a stock Raspberry Pi OS Lite **arm64** image, then run:
   --compress
 ```
 
-If an ARM64 MaschinePI binary is available, add:
+To reuse an existing ARM64 MaschinePI binary instead of cross-compiling it, add:
 
 ```bash
 --maschinepi-binary /path/to/maschinepi
 ```
 
-Without it, the Pi builds MaschinePI on first boot. The build emits the image
-and a neighboring `.sha256` file. Verify it before flashing:
+Without it, the host cross-compiles MaschinePI before assembling the image. The
+build emits the image and a neighboring `.sha256` file. Verify it before flashing:
 
 ```bash
 (cd image/output && sha256sum -c mpi-station-test.img.xz.sha256)
@@ -30,11 +29,9 @@ MPI_BUILD_TMPDIR=/dev/shm ./image/inspect-image.sh \
   image/output/mpi-station-test.img.xz
 ```
 
-## 2. Flash and provision
+## 2. Flash and boot
 
-Use a 16 GB or larger card when MaschinePI will be built on first boot. An 8 GB
-card is only suitable when an ARM64 MaschinePI binary was injected at image
-build time.
+Use a 16 GB or larger card.
 
 Prefer Raspberry Pi Imager's “Use custom image” flow. If using `dd`, identify
 the SD-card device carefully; the output device is overwritten:
@@ -44,22 +41,28 @@ xz -dc image/output/mpi-station-test.img.xz | \
   sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-Connect Ethernet for the first boot. Attach the MK3 before the second boot so
-both modes can be tested. The temporary image login is:
+The image is already provisioned: first boot requires no network, compilation,
+package installation, or automatic reboot. Attach the MK3 before power-on. The
+image login is:
 
 - user: `mpi`
 - password: `maschinepi` (or the `--password` value used at build time)
 - hostname: `mpi-station`
 
-First boot installs packages and builds missing binaries, writes
-`/var/lib/mpi-station/provisioned`, and reboots. This can take a long time when
-MaschinePI is built on the Pi. Follow progress over the serial console or SSH:
+When the card is inspected on another Linux machine it exposes four filesystems:
 
-```bash
-journalctl -fu mpi-station-first-boot.service
-```
+- Raspberry Pi boot
+- Raspberry Pi root
+- `MIXXX_LIBRARY`
+- `MPI_SAMPLES`
 
-After the automatic reboot, the default `maschinepi.target` should start.
+On the Pi, the last two mount at `/home/mpi/Music` and
+`/home/mpi/maschinepi/samples`; the sample partition already contains the
+pinned starter samples.
+
+Normal boot starts the stored default. Hold Shift on the MK3 or a USB keyboard
+during startup to open the selector. D1/D2 choose a mode directly; the encoder
+and push navigate/activate; D8 saves the highlighted default.
 
 ## 3. Verify target ownership and switching
 
@@ -120,11 +123,10 @@ but the selector isolates `mixxx.target`.
 
 ## 4. Capture failures
 
-If first-boot provisioning fails, it intentionally leaves the provision marker
-absent so the service retries on the next boot. Capture:
+If startup fails, capture:
 
 ```bash
-journalctl -b -u mpi-station-first-boot.service --no-pager
+journalctl -b -u mk3-mode-selector.service --no-pager
 systemctl --failed --no-pager
 git -C /opt/mpi-station submodule status --recursive
 ```

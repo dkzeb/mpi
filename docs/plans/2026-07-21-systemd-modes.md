@@ -31,5 +31,5 @@ sudo mpi-mode-switch mixxx
 sudo mpi-mode-switch maschinepi
 sudo mpi-mode-switch --set-default mixxx
 systemctl list-units 'mixxx*' 'maschinepi*' 'mk3*' 'xvfb*' 'openbox*'
-journalctl -b -u mpi-station-first-boot -u mk3-mode-selector
+journalctl -b -u mk3-mode-selector
 ```

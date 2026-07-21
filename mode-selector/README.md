@@ -1,6 +1,6 @@
 # mode-selector/ — the mk3-mode-selector binary (Phase 4)
 
-A small, mode-agnostic C binary that:
+The integrator-owned, mode-agnostic C binary:
 
 - Owns the MK3 at boot via the `external/libmk3` submodule (render + input).
 - Reads Shift (MK3 Shift or keyboard Shift via evdev) in a short poll window.
@@ -11,6 +11,8 @@ A small, mode-agnostic C binary that:
 
 It builds against `external/libmk3` directly, rather than MaschinePI's JUCE
 layer, to stay small. It is invisible unless Shift is held and has no timeout
-once summoned.
+once summoned. D1/D2 activate their modes directly, the navigation encoder and
+push select/activate, and D8 stores the highlighted mode as the next default.
+Keyboard arrows, number keys, Enter, and D provide the equivalent bench path.
 
 See the design spec sections “Boot flow” and “Mode selector UX (MK3)”.

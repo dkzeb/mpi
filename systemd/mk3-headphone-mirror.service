@@ -8,7 +8,7 @@ Wants=mixxx.service
 [Service]
 Type=simple
 User=mpi
-Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 ExecStart=/bin/bash /opt/mpi-station/external/mixxx-mk3/pi-setup/mk3-headphone-mirror.sh
 Restart=on-failure
 RestartSec=5

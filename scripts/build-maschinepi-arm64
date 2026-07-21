@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+source_dir="$repo_root/external/maschinepi-te"
+build_dir="${MPI_MASCHINEPI_BUILD_DIR:-$repo_root/image/output/maschinepi-arm64-build}"
+output="${MPI_MASCHINEPI_BINARY:-$repo_root/image/output/maschinepi-arm64}"
+toolchain="$repo_root/cmake/maschinepi-aarch64-toolchain.cmake"
+overlay_root="$repo_root/image/output/arm64-sysroot/root"
+
+for command_name in cmake ninja aarch64-linux-gnu-gcc aarch64-linux-gnu-g++ pkg-config; do
+  command -v "$command_name" >/dev/null || {
+    echo "Missing cross-build command: $command_name" >&2
+    exit 1
+  }
+done
+
+[[ -f "$source_dir/CMakeLists.txt" ]] || {
+  echo "Missing recursive MaschinePI submodule checkout: $source_dir" >&2
+  exit 1
+}
+[[ -f "$source_dir/pi-tools/arm64-compat.h" ]] || {
+  echo "Missing pinned ARM64 compatibility header" >&2
+  exit 1
+}
+
+if [[ ! -f /usr/include/aarch64-linux-gnu/curl/curl.h ]]; then
+  if [[ ! -f "$overlay_root/usr/include/aarch64-linux-gnu/curl/curl.h" ]]; then
+    command -v apt-get >/dev/null || {
+      echo "Missing ARM64 curl headers and apt-get is unavailable" >&2
+      exit 1
+    }
+    command -v dpkg-deb >/dev/null || {
+      echo "Missing ARM64 curl headers and dpkg-deb is unavailable" >&2
+      exit 1
+    }
+    deb_dir="$repo_root/image/output/arm64-sysroot/debs"
+    mkdir -p "$deb_dir" "$overlay_root"
+    (
+      cd "$deb_dir"
+      apt-get download libcurl4-openssl-dev:arm64
+      for package_file in ./*.deb; do
+        dpkg-deb -x "$package_file" "$overlay_root"
+      done
+    )
+  fi
+  overlay_args=(-DMPI_ARM64_OVERLAY_ROOT="$overlay_root")
+else
+  overlay_args=()
+fi
+
+# JUCE's cross-build bootstraps a native juceaide helper. It deliberately
+# unsets PKG_CONFIG_LIBDIR for that nested host build, so keep target paths in
+# LIBDIR only; PKG_CONFIG_PATH would leak ARM64 libraries into the host linker.
+export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+unset PKG_CONFIG_PATH PKG_CONFIG_SYSROOT_DIR
+
+cmake -S "$source_dir" -B "$build_dir" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
+  -DDEV_DESKTOP=OFF \
+  -DENABLE_TRACKTION=ON \
+  -DBUILD_TOOLS=OFF \
+  "${overlay_args[@]}"
+cmake --build "$build_dir" --target maschinepi -j"${MPI_BUILD_JOBS:-$(nproc)}"
+
+binary=""
+for candidate in \
+  "$build_dir/bin/maschinepi" \
+  "$build_dir/maschinepi_artefacts/Release/maschinepi" \
+  "$build_dir/maschinepi"; do
+  if [[ -x "$candidate" ]]; then
+    binary="$candidate"
+    break
+  fi
+done
+[[ -n "$binary" ]] || { echo "Cross-build produced no MaschinePI binary" >&2; exit 1; }
+file "$binary" | grep -Eq 'ARM aarch64|ARM64' || {
+  echo "Cross-build output is not ARM64: $(file "$binary")" >&2
+  exit 1
+}
+
+install -D -m 755 "$binary" "$output"
+echo "ARM64 MaschinePI binary: $output"
+file "$output"

@@ -5,6 +5,7 @@ PartOf=maschinepi.target
 Conflicts=mixxx.target
 After=sound.target maschinepi-audio-profile.service
 Requires=maschinepi-audio-profile.service
+RequiresMountsFor=/home/mpi/maschinepi/samples
 
 [Service]
 Type=simple
@@ -12,8 +13,8 @@ User=mpi
 Group=audio
 SupplementaryGroups=pipewire plugdev
 Environment=HOME=/home/mpi
-Environment=XDG_RUNTIME_DIR=/run/user/%U
-Environment=PIPEWIRE_RUNTIME_DIR=/run/user/%U
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=PIPEWIRE_RUNTIME_DIR=/run/user/1000
 Environment=PIPEWIRE_LATENCY=64/48000
 ExecStart=/usr/local/bin/maschinepi
 Restart=on-failure

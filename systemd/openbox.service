@@ -12,8 +12,8 @@ Environment=HOME=/home/mpi
 Environment=DISPLAY=:99
 Environment=XCURSOR_THEME=DMZ-White
 Environment=XCURSOR_SIZE=24
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 50); do /usr/bin/xsetroot -cursor_name left_ptr >/dev/null 2>&1 && exit 0; sleep 0.1; done; echo "Xvfb display :99 not ready" >&2; exit 1'
 ExecStart=/usr/bin/openbox
-ExecStartPost=/usr/bin/xsetroot -cursor_name left_ptr
 Restart=on-failure
 RestartSec=2
 

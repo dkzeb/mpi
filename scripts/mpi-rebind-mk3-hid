@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly USB_DEVICES=/sys/bus/usb/devices
+readonly USBHID_BIND=/sys/bus/usb/drivers/usbhid/bind
+
+for device_path in "$USB_DEVICES"/*; do
+  [[ -f "$device_path/idVendor" && -f "$device_path/idProduct" ]] || continue
+  [[ "$(<"$device_path/idVendor")" == 17cc ]] || continue
+  [[ "$(<"$device_path/idProduct")" == 1600 ]] || continue
+
+  interface="$(basename "$device_path"):1.4"
+  interface_path="$USB_DEVICES/$interface"
+  [[ -e "$interface_path" ]] || continue
+
+  if [[ -L "$interface_path/driver" ]]; then
+    [[ "$(basename "$(readlink -f "$interface_path/driver")")" == usbhid ]] || {
+      echo "MK3 HID interface is owned by an unexpected kernel driver" >&2
+      exit 1
+    }
+    exit 0
+  fi
+
+  printf '%s' "$interface" > "$USBHID_BIND"
+  [[ "$(basename "$(readlink -f "$interface_path/driver")")" == usbhid ]] || {
+    echo "Failed to bind $interface to usbhid" >&2
+    exit 1
+  }
+  exit 0
+done
+
+# An unplugged MK3 is valid. Normal USB enumeration will bind usbhid when the
+# controller is attached later.
+exit 0

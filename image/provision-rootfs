@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly STATION_ROOT=/opt/mpi-station
+readonly MIXXX_ROOT="$STATION_ROOT/external/mixxx-mk3"
+readonly STATE_DIR=/var/lib/mpi-station
+readonly USER_NAME=mpi
+
+log() {
+  printf '[mpi-station-host-provision] %s\n' "$*"
+}
+
+apt_retry() {
+  local attempt
+  for attempt in $(seq 1 12); do
+    if apt-get "$@"; then
+      return 0
+    fi
+    if [[ "$attempt" -eq 12 ]]; then
+      log "apt-get $* failed after $attempt attempts"
+      return 1
+    fi
+    log "apt-get $* failed (attempt $attempt/12); retrying in 10 seconds"
+    sleep 10
+  done
+}
+
+export DEBIAN_FRONTEND=noninteractive
+
+log "installing the complete ARM64 runtime into the mounted image"
+apt_retry update
+apt_retry install -y --no-install-recommends \
+  ca-certificates curl git openssh-server sudo \
+  libusb-1.0-0 libasound2 libjack-jackd2-0 libcurl4t64 \
+  libfreetype6 libfontconfig1 fonts-dejavu-core \
+  libx11-6 libxcomposite1 libxcursor1 libxext6 libxfixes3 \
+  libxinerama1 libxrandr2 libxrender1 libgl1 libglu1-mesa \
+  xvfb openbox xdotool x11-xserver-utils dmz-cursor-theme \
+  sqlite3 pipewire pipewire-alsa pipewire-jack pipewire-pulse wireplumber \
+  zenity qrencode feh cifs-utils ffmpeg yt-dlp python3 python3-pyqt5 \
+  libavcodec61 libavformat61 libavutil59 libchromaprint1 libdjinterop0 \
+  libebur128-1 libflac14 libglib2.0-0t64 libhidapi-hidraw0 libid3tag0 \
+  liblilv-0-0 libmad0 libmodplug1 libmp3lame0 libogg0 libopengl0 \
+  libopus0 libopusfile0 libportaudio2 libportmidi0 libprotobuf-lite32t64 \
+  libqt6core5compat6 libqt6core6t64 libqt6dbus6 libqt6gui6 libqt6keychain1 \
+  libqt6network6 libqt6opengl6 libqt6qml6 libqt6quick6 libqt6sql6 \
+  libqt6sql6-sqlite libqt6svg6 libqt6svgwidgets6 libqt6widgets6 libqt6xml6 \
+  librubberband2 libshout-idjc3 libsndfile1 libsoundtouch1 libswresample5 \
+  libtag2 libupower-glib3 libvorbis0a libvorbisenc2 libvorbisfile3 libwavpack1
+
+log "installing the pinned Mixxx ARM64 distribution"
+mixxx_deb="$MIXXX_ROOT/mixxx_2.6.0-beta-1_arm64.deb"
+[[ -f "$mixxx_deb" ]] || { log "missing $mixxx_deb"; exit 1; }
+dpkg -i "$mixxx_deb"
+
+log "creating the fixed runtime user"
+existing_uid1000="$(getent passwd 1000 | cut -d: -f1 || true)"
+if ! id "$USER_NAME" >/dev/null 2>&1; then
+  if [[ -n "$existing_uid1000" ]]; then
+    old_group="$(id -gn "$existing_uid1000")"
+    usermod -l "$USER_NAME" "$existing_uid1000"
+    if [[ "$old_group" != "$USER_NAME" && "$(getent group "$old_group" | cut -d: -f3)" == 1000 ]]; then
+      groupmod -n "$USER_NAME" "$old_group"
+    fi
+    usermod -d "/home/$USER_NAME" -s /bin/bash "$USER_NAME"
+  else
+    getent group "$USER_NAME" >/dev/null || groupadd -g 1000 "$USER_NAME"
+    useradd -M -u 1000 -g "$USER_NAME" -d "/home/$USER_NAME" -s /bin/bash "$USER_NAME"
+  fi
+fi
+
+password_hash="$(<"$STATE_DIR/password.hash")"
+usermod -p "$password_hash" "$USER_NAME"
+rm -f "$STATE_DIR/password.hash"
+
+supplementary=()
+for group in sudo audio pipewire plugdev video input render; do
+  getent group "$group" >/dev/null && supplementary+=("$group")
+done
+if [[ "${#supplementary[@]}" -gt 0 ]]; then
+  group_list="$(IFS=,; echo "${supplementary[*]}")"
+  usermod -aG "$group_list" "$USER_NAME"
+fi
+install -d -m 755 /var/lib/systemd/linger
+touch "/var/lib/systemd/linger/$USER_NAME"
+
+log "creating Mixxx state and boot splash assets"
+sqlite3 "/home/$USER_NAME/.mixxx/mixxxdb.sqlite" \
+  'CREATE TABLE IF NOT EXISTS directories (directory TEXT UNIQUE);'
+sqlite3 "/home/$USER_NAME/.mixxx/mixxxdb.sqlite" \
+  "INSERT OR IGNORE INTO directories (directory) VALUES ('/home/$USER_NAME/Music');"
+
+install -d -m 755 /var/lib/mk3-bootsplash
+if [[ -f "$MIXXX_ROOT/pi-setup/bootsplash-left-anim.gif" ]]; then
+  ffmpeg -y -v error -i "$MIXXX_ROOT/pi-setup/bootsplash-left-anim.gif" \
+    -pix_fmt rgb565le -s 480x272 -f rawvideo \
+    /var/lib/mk3-bootsplash/all_frames.raw
+  if [[ -s /var/lib/mk3-bootsplash/all_frames.raw ]]; then
+    frame_bytes=$((480 * 272 * 2))
+    frame_count=$(($(stat -c%s /var/lib/mk3-bootsplash/all_frames.raw) / frame_bytes))
+    for ((frame = 0; frame < frame_count; frame++)); do
+      dd if=/var/lib/mk3-bootsplash/all_frames.raw \
+        of="/var/lib/mk3-bootsplash/frame_${frame}.raw" \
+        bs="$frame_bytes" skip="$frame" count=1 status=none
+    done
+    rm -f /var/lib/mk3-bootsplash/all_frames.raw
+  fi
+fi
+
+chown -R 1000:1000 "/home/$USER_NAME"
+
+log "enabling the shared runtime and selector only"
+systemctl --global enable pipewire.service pipewire.socket wireplumber.service
+systemctl disable \
+  maschinepi.service mk3-boot-display.service mk3-boot-listener.service \
+  xvfb.service openbox.service mk3-bootsplash.service mk3-screen-daemon.service \
+  mixxx.service mk3-t9-daemon.service mk3-mouse-daemon.service \
+  mk3-overlay.service mk3-headphone-mirror.service 2>/dev/null || true
+systemctl set-default mode-selector.target
+
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+touch "$STATE_DIR/provisioned"
+log "mounted image contains a complete ready-to-run ARM64 distribution"

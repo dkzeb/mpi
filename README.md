@@ -48,12 +48,13 @@ keeps both modes on a reproducible, known-good combination.
 ## Status
 
 Phase 1 (libmk3 unification) and Phase 2 (integrator scaffold) are complete.
-The Phase 2b image injector and Phase 3 systemd modes are implemented and await
-image/Raspberry Pi 4 validation. Run the host-side checks with:
+The image builder, selector, and mutually exclusive mode targets are implemented
+and await final image/Raspberry Pi 4 validation. Run the host-side checks with:
 
 ```bash
 ./tests/test-systemd-modes.sh
 ./tests/test-install-rootfs.sh
+./tests/test-mode-selector.sh
 ```
 
 Build and hardware instructions are in `docs/hardware-test.md`. See

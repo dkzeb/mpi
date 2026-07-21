@@ -1,0 +1,9 @@
+<!DOCTYPE SoundManagerConfig>
+<SoundManagerConfig api="JACK Audio Connection Kit" deck_count="2" force_network_clock="0" latency="5" samplerate="48000" sync_buffers="2">
+ <SoundDevice name="Maschine MK3 Analog Surround 4.0" portAudioIndex="6">
+  <output channel="0" channel_count="2" index="0" type="Master"/>
+ </SoundDevice>
+ <SoundDevice name="Built-in Audio Stereo" portAudioIndex="3">
+  <output channel="0" channel_count="2" index="0" type="Headphones"/>
+ </SoundDevice>
+</SoundManagerConfig>

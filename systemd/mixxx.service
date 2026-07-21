@@ -2,15 +2,16 @@
 Description=Mixxx DJ software
 PartOf=mixxx.target
 Conflicts=maschinepi.target
-After=sound.target openbox.service mixxx-audio-profile.service
-Requires=openbox.service mixxx-audio-profile.service
+After=sound.target openbox.service mixxx-audio-profile.service mk3-hid-rebind.service
+Requires=openbox.service mixxx-audio-profile.service mk3-hid-rebind.service
+RequiresMountsFor=/home/mpi/Music
 
 [Service]
 Type=simple
 User=mpi
 Environment=DISPLAY=:99
 Environment=HOME=/home/mpi
-Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=PIPEWIRE_LATENCY=256/48000
 Environment=XCURSOR_THEME=DMZ-White
 Environment=XCURSOR_SIZE=24
