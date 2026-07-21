@@ -23,7 +23,7 @@ maschinepi_binary=""
 password="maschinepi"
 compress=0
 force=0
-rootfs_headroom_mb=1024
+rootfs_headroom_mb=2048
 data_bootstrap_mb=256
 
 while [[ $# -gt 0 ]]; do

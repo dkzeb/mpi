@@ -10,7 +10,7 @@ all compilation, package installation, and provisioning on the host.
 ```
 
 The mount/injection step runs in the existing `pi-gen:latest` helper container,
-so host sudo is not required. The root filesystem receives 1024 MiB of build
+so host sudo is not required. The root filesystem receives 2048 MiB of build
 headroom. Two small labeled ext4 bootstrap partitions are appended:
 
 - `MIXXX_LIBRARY`, mounted at `/home/mpi/Music`.
