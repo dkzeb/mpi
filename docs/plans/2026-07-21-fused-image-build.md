@@ -27,7 +27,7 @@ pinned Mixxx arm64 package is already carried by `mixxx-mk3`.
 - [x] Add a Docker-backed image mount/injection command with optional compression
   and SHA-256 output.
 - [x] Add a rootfs fixture test proving default-target and enablement policy.
-- [ ] Build against a current Raspberry Pi OS Lite arm64 base and inspect the
+- [x] Build against Raspberry Pi OS Lite arm64 2026-06-18 and inspect the
   resulting partitions and injected files.
 - [ ] Flash and complete first-boot provisioning on Raspberry Pi 4 hardware.
 

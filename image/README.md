@@ -10,7 +10,9 @@ the pinned integrator release plus a one-time hardware provisioner.
 ```
 
 The mount/injection step runs in the existing `pi-gen:latest` helper container,
-so host sudo is not required. On first Pi boot, Ethernet/Wi-Fi is required while
+so host sudo is not required. The root partition/filesystem receives 768 MiB of
+pre-expansion headroom by default; override with `--rootfs-headroom-mb` only when
+deliberately changing the payload budget. On first Pi boot, Ethernet/Wi-Fi is required while
 the provisioner installs dependencies, installs the pinned Mixxx arm64 package,
 and builds the MK3 screen tooling. By default it also builds MaschinePI natively;
 pass `--maschinepi-binary /path/to/arm64/maschinepi` to avoid that long build.

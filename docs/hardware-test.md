@@ -25,7 +25,9 @@ Without it, the Pi builds MaschinePI on first boot. The build emits the image
 and a neighboring `.sha256` file. Verify it before flashing:
 
 ```bash
-sha256sum -c image/output/mpi-station-test.img.xz.sha256
+(cd image/output && sha256sum -c mpi-station-test.img.xz.sha256)
+MPI_BUILD_TMPDIR=/dev/shm ./image/inspect-image.sh \
+  image/output/mpi-station-test.img.xz
 ```
 
 ## 2. Flash and provision
