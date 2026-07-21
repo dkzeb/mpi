@@ -20,6 +20,7 @@ if command -v systemd-analyze >/dev/null; then
     usr/local/sbin/mpi-configure-mixxx-controller \
     usr/local/sbin/mpi-mode-select \
     usr/local/sbin/mpi-rebind-mk3-hid \
+    usr/local/sbin/mpi-prepare-data-partitions \
     usr/local/sbin/mk3-mode-selector \
     usr/local/bin/maschinepi \
     usr/local/bin/mk3-screen-daemon \

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly STATE_DIR=/var/lib/mpi-station
+readonly READY_MARKER="$STATE_DIR/data-layout-ready"
+readonly SAMPLE_SEED=/usr/share/mpi-station/samples
+readonly SECTORS_PER_MIB=2048
+readonly MIN_PARTITION_SECTORS=$((256 * SECTORS_PER_MIB))
+
+calculate_layout() {
+  local disk_sectors="$1"
+  local data_start="$2"
+  local usable half
+
+  [[ "$disk_sectors" =~ ^[0-9]+$ && "$data_start" =~ ^[0-9]+$ ]] || return 1
+  usable=$((disk_sectors - data_start))
+  [[ "$usable" -ge $((2 * MIN_PARTITION_SECTORS)) ]] || {
+    echo "Card has less than 512 MiB available for the two data partitions" >&2
+    return 1
+  }
+
+  # Put the boundary on a MiB sector. The second partition receives at most
+  # one alignment unit more than the first.
+  half=$(((usable / 2 / SECTORS_PER_MIB) * SECTORS_PER_MIB))
+  printf '%s %s %s %s\n' \
+    "$data_start" "$half" "$((data_start + half))" "$((usable - half))"
+}
+
+if [[ "${1:-}" == --plan ]]; then
+  [[ $# -eq 3 ]] || { echo "Usage: $0 --plan DISK_SECTORS DATA_START" >&2; exit 2; }
+  calculate_layout "$2" "$3"
+  exit
+fi
+
+[[ $EUID -eq 0 ]] || { echo "Must run as root" >&2; exit 1; }
+[[ ! -e "$READY_MARKER" ]] || exit 0
+
+root_source="$(findmnt -n -o SOURCE /)"
+root_device="$(readlink -f "$root_source")"
+parent_name="$(lsblk -ndo PKNAME "$root_device")"
+[[ -n "$parent_name" ]] || { echo "Cannot resolve the root block device" >&2; exit 1; }
+disk="/dev/$parent_name"
+
+root_part_number="$(lsblk -ndo PARTN "$root_device")"
+[[ "$root_part_number" == 2 ]] || {
+  echo "Refusing unexpected layout: root is partition $root_part_number, not 2" >&2
+  exit 1
+}
+[[ "$(blockdev --getss "$disk")" == 512 ]] || {
+  echo "Only 512-byte-sector SD cards are supported" >&2
+  exit 1
+}
+sfdisk -d "$disk" | grep -q '^label: dos$' || {
+  echo "Refusing unexpected non-DOS partition table on $disk" >&2
+  exit 1
+}
+
+p3_device="$(lsblk -nrpo NAME,PARTN "$disk" | awk '$2 == 3 { print $1; exit }')"
+p4_device="$(lsblk -nrpo NAME,PARTN "$disk" | awk '$2 == 4 { print $1; exit }')"
+[[ -b "$p3_device" && -b "$p4_device" ]] || {
+  echo "Expected data partitions 3 and 4 are missing" >&2
+  exit 1
+}
+if findmnt -rn "$p3_device" >/dev/null || findmnt -rn "$p4_device" >/dev/null; then
+  echo "Data partitions must be unmounted while their final sizes are assigned" >&2
+  exit 1
+fi
+
+data_start="$(lsblk -bndo START "$p3_device")"
+disk_sectors="$(blockdev --getsz "$disk")"
+read -r p3_start p3_size p4_start p4_size < <(
+  calculate_layout "$disk_sectors" "$data_start"
+)
+
+echo "Dividing SD-card remainder: MIXXX_LIBRARY=$p3_size sectors, MPI_SAMPLES=$p4_size sectors"
+printf '%s,%s,83\n' "$p3_start" "$p3_size" | \
+  sfdisk --no-reread --force -N 3 "$disk"
+printf '%s,%s,83\n' "$p4_start" "$p4_size" | \
+  sfdisk --no-reread --force -N 4 "$disk"
+
+partx --update --nr 3 "$disk"
+partx --update --nr 4 "$disk"
+udevadm settle
+
+mkfs.ext4 -q -F -L MIXXX_LIBRARY "$p3_device"
+mkfs.ext4 -q -F -L MPI_SAMPLES "$p4_device"
+
+mixxx_mount="$(mktemp -d /run/mpi-mixxx-library.XXXXXX)"
+samples_mount="$(mktemp -d /run/mpi-samples.XXXXXX)"
+cleanup() {
+  mountpoint -q "$samples_mount" && umount "$samples_mount" || true
+  mountpoint -q "$mixxx_mount" && umount "$mixxx_mount" || true
+  rmdir "$mixxx_mount" "$samples_mount" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+mount "$p3_device" "$mixxx_mount"
+mount "$p4_device" "$samples_mount"
+printf '%s\n' 'Mixxx library partition - copy music files here.' > "$mixxx_mount/README.txt"
+cp -a "$SAMPLE_SEED/." "$samples_mount/"
+chown -R 1000:1000 "$mixxx_mount" "$samples_mount"
+sync
+cleanup
+trap - EXIT
+
+install -d -m 755 "$STATE_DIR"
+touch "$READY_MARKER"
+echo "Data partitions are ready"

@@ -15,6 +15,9 @@ boot, and exposes dedicated Mixxx-library and MaschinePI-sample filesystems.
 - Partition 3 is ext4 label `MIXXX_LIBRARY`, mounted at `/home/mpi/Music`.
 - Partition 4 is ext4 label `MPI_SAMPLES`, mounted at
   `/home/mpi/maschinepi/samples`, with `external/maschinepi-te/samples` copied in.
+- On first boot, before local filesystems mount, the physical-card remainder
+  after root is divided equally between partitions 3 and 4; samples are restored
+  from a rootfs seed after those filesystems are recreated.
 - Raspberry Pi OS root auto-expansion is disabled because root is no longer the
   last partition.
 - Neither target contains a compiler-driven or network-driven first-boot step.

@@ -6,7 +6,7 @@ usage() {
 Usage: image/build-image.sh --base BASE_IMAGE [--output OUTPUT.img]
        [--maschinepi-binary ARM64_FILE] [--password PASSWORD]
        [--release-tree DIR] [--rootfs-headroom-mb N]
-       [--mixxx-library-mb N] [--samples-mb N] [--compress] [--force]
+       [--data-bootstrap-mb N] [--compress] [--force]
 
 BASE_IMAGE may be an uncompressed .img or an .img.xz/.img.gz/.zip image.
 MaschinePI is cross-compiled on the host unless --maschinepi-binary is supplied.
@@ -24,8 +24,7 @@ password="maschinepi"
 compress=0
 force=0
 rootfs_headroom_mb=1024
-mixxx_library_mb=2048
-samples_mb=2048
+data_bootstrap_mb=256
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,8 +34,7 @@ while [[ $# -gt 0 ]]; do
     --maschinepi-binary) maschinepi_binary="$2"; shift 2 ;;
     --password) password="$2"; shift 2 ;;
     --rootfs-headroom-mb) rootfs_headroom_mb="$2"; shift 2 ;;
-    --mixxx-library-mb) mixxx_library_mb="$2"; shift 2 ;;
-    --samples-mb) samples_mb="$2"; shift 2 ;;
+    --data-bootstrap-mb) data_bootstrap_mb="$2"; shift 2 ;;
     --compress) compress=1; shift ;;
     --force) force=1; shift ;;
     *) usage ;;
@@ -45,8 +43,7 @@ done
 
 [[ -f "$base" ]] || usage
 [[ "$rootfs_headroom_mb" =~ ^[0-9]+$ ]] || usage
-[[ "$mixxx_library_mb" =~ ^[0-9]+$ && "$mixxx_library_mb" -ge 256 ]] || usage
-[[ "$samples_mb" =~ ^[0-9]+$ && "$samples_mb" -ge 256 ]] || usage
+[[ "$data_bootstrap_mb" =~ ^[0-9]+$ && "$data_bootstrap_mb" -ge 64 ]] || usage
 command -v docker >/dev/null || { echo "docker is required" >&2; exit 1; }
 command -v realpath >/dev/null || { echo "realpath is required" >&2; exit 1; }
 
@@ -82,7 +79,7 @@ case "$base" in
   *) cp --sparse=always "$base" "$work_image" ;;
 esac
 original_size_bytes="$(stat -c%s "$work_image")"
-extra_mb=$((rootfs_headroom_mb + mixxx_library_mb + samples_mb))
+extra_mb=$((rootfs_headroom_mb + 2 * data_bootstrap_mb))
 truncate -s "+${extra_mb}M" "$work_image"
 
 work_dir="$(dirname "$work_image")"
@@ -123,7 +120,7 @@ docker run --rm --privileged \
   "$container_image" \
   /repo/image/inject-image.sh "/work/$(basename "$work_image")" /release \
     /work/artifacts "$password" "$original_size_bytes" \
-    "$rootfs_headroom_mb" "$mixxx_library_mb" "$samples_mb"
+    "$rootfs_headroom_mb" "$data_bootstrap_mb" "$data_bootstrap_mb"
 
 if [[ "$compress" == 1 ]]; then
   echo "Compressing $work_image"

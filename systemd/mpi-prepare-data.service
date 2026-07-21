@@ -1,0 +1,15 @@
+[Unit]
+Description=Divide SD-card remainder between Mixxx and MaschinePI data
+DefaultDependencies=no
+After=systemd-remount-fs.service
+Before=local-fs.target
+ConditionPathExists=!/var/lib/mpi-station/data-layout-ready
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mpi-prepare-data-partitions
+RemainAfterExit=yes
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=local-fs.target

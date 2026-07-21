@@ -12,7 +12,7 @@ mkdir -p \
   "$root/etc" "$boot" "$release/config" \
   "$release/external/mixxx-mk3/mapping" \
   "$release/external/mixxx-mk3/skin/MK3" \
-  "$release/external/maschinepi-te"
+  "$release/external/maschinepi-te/samples/Drums"
 printf '127.0.1.1 raspberrypi\n' > "$root/etc/hosts"
 printf '# fixture\n' > "$release/README.md"
 cp "$repo_root/config/mixxx-soundconfig.xml" "$release/config/"
@@ -21,6 +21,7 @@ printf '<controller/>\n' > \
 printf '// controller fixture\n' > \
   "$release/external/mixxx-mk3/mapping/Native-Instruments-Maschine-MK3.js"
 printf '<skin/>\n' > "$release/external/mixxx-mk3/skin/MK3/skin.xml"
+printf 'sample fixture\n' > "$release/external/maschinepi-te/samples/Drums/kick.wav"
 
 "$repo_root/image/install-rootfs.sh" \
   --root "$root" --boot "$boot" --release-tree "$release" --password test-only
@@ -35,6 +36,9 @@ grep -qx 'default_mode=maschinepi' "$root/var/lib/mk3-mode/config"
 [[ -e "$boot/ssh" ]]
 [[ -x "$root/usr/local/sbin/mpi-mode-switch" ]]
 [[ -x "$root/usr/local/sbin/mpi-rebind-mk3-hid" ]]
+[[ -x "$root/usr/local/sbin/mpi-prepare-data-partitions" ]]
+[[ -L "$root/etc/systemd/system/local-fs.target.wants/mpi-prepare-data.service" ]]
+[[ -f "$root/usr/share/mpi-station/samples/Drums/kick.wav" ]]
 grep -q 'KERNEL=="hidraw\*"' "$root/etc/udev/rules.d/99-mk3-controller.rules"
 [[ -x "$root/usr/local/sbin/mpi-station-provision-rootfs" ]]
 grep -q '^samples_dir=/home/mpi/maschinepi/samples$' \

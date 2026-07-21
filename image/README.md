@@ -11,13 +11,18 @@ all compilation, package installation, and provisioning on the host.
 
 The mount/injection step runs in the existing `pi-gen:latest` helper container,
 so host sudo is not required. The root filesystem receives 1024 MiB of build
-headroom. Two labeled ext4 partitions are appended by default:
+headroom. Two small labeled ext4 bootstrap partitions are appended:
 
-- `MIXXX_LIBRARY` (2048 MiB), mounted at `/home/mpi/Music`.
-- `MPI_SAMPLES` (2048 MiB), mounted at
+- `MIXXX_LIBRARY`, mounted at `/home/mpi/Music`.
+- `MPI_SAMPLES`, mounted at
   `/home/mpi/maschinepi/samples` and preloaded with the pinned sample set.
 
-Override their capacities with `--mixxx-library-mb` and `--samples-mb`.
+On the first boot, before either filesystem mounts, the image divides every
+remaining sector on the physical card equally between these two partitions,
+recreates them, and restores the bundled samples from the rootfs seed. This
+step is local filesystem setup only: it performs no compilation, package
+download, or application provisioning. `--data-bootstrap-mb` controls only the
+small pre-boot image partitions, not their final on-card sizes.
 MaschinePI, the Mixxx screen tools, and the selector are cross-compiled on the
 host. Runtime packages and the pinned Mixxx ARM64 package are installed into the
 mounted rootfs under QEMU. No compilation, package download, or provisioning is

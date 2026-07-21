@@ -58,7 +58,8 @@ When the card is inspected on another Linux machine it exposes four filesystems:
 
 On the Pi, the last two mount at `/home/mpi/Music` and
 `/home/mpi/maschinepi/samples`; the sample partition already contains the
-pinned starter samples.
+pinned starter samples. During the first boot only, their partition boundary is
+adjusted so each receives half of all card space remaining after root.
 
 Normal boot starts the stored default. Hold Shift on the MK3 or a USB keyboard
 during startup to open the selector. D1/D2 choose a mode directly; the encoder

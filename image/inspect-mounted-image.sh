@@ -10,6 +10,17 @@ root_mount="$(mktemp -d)"
 boot_mount="$(mktemp -d)"
 mixxx_mount="$(mktemp -d)"
 samples_mount="$(mktemp -d)"
+next_loop_minor=220
+
+attach_loop() {
+  local destination="$1"
+  shift
+  local node="/dev/loop$next_loop_minor"
+  [[ -b "$node" ]] || mknod "$node" b 7 "$next_loop_minor"
+  losetup "$node" "$@"
+  printf -v "$destination" '%s' "$node"
+  next_loop_minor=$((next_loop_minor + 1))
+}
 
 cleanup() {
   mountpoint -q "$samples_mount" && umount "$samples_mount" || true
@@ -37,14 +48,14 @@ read -r root_start root_size <<< "${partitions[1]}"
 read -r mixxx_start mixxx_size <<< "${partitions[2]}"
 read -r samples_start samples_size <<< "${partitions[3]}"
 
-boot_loop="$(losetup --find --show --read-only \
-  --offset "$((boot_start * 512))" --sizelimit "$((boot_size * 512))" "$image_path")"
-root_loop="$(losetup --find --show --read-only \
-  --offset "$((root_start * 512))" --sizelimit "$((root_size * 512))" "$image_path")"
-mixxx_loop="$(losetup --find --show --read-only \
-  --offset "$((mixxx_start * 512))" --sizelimit "$((mixxx_size * 512))" "$image_path")"
-samples_loop="$(losetup --find --show --read-only \
-  --offset "$((samples_start * 512))" --sizelimit "$((samples_size * 512))" "$image_path")"
+attach_loop boot_loop --read-only \
+  --offset "$((boot_start * 512))" --sizelimit "$((boot_size * 512))" "$image_path"
+attach_loop root_loop --read-only \
+  --offset "$((root_start * 512))" --sizelimit "$((root_size * 512))" "$image_path"
+attach_loop mixxx_loop --read-only \
+  --offset "$((mixxx_start * 512))" --sizelimit "$((mixxx_size * 512))" "$image_path"
+attach_loop samples_loop --read-only \
+  --offset "$((samples_start * 512))" --sizelimit "$((samples_size * 512))" "$image_path"
 mount -o ro "$boot_loop" "$boot_mount"
 mount -o ro "$root_loop" "$root_mount"
 mount -o ro "$mixxx_loop" "$mixxx_mount"

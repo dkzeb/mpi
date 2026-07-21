@@ -39,6 +39,7 @@ install -m 755 "$repo_root/scripts/mpi-mode-select" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-mode-switch" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-audio-profile" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-rebind-mk3-hid" "$root/usr/local/sbin/"
+install -m 755 "$repo_root/scripts/mpi-prepare-data-partitions" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/scripts/mpi-configure-mixxx-controller" "$root/usr/local/sbin/"
 install -m 755 "$repo_root/image/provision-rootfs" \
   "$root/usr/local/sbin/mpi-station-provision-rootfs"
@@ -107,6 +108,10 @@ projects_dir=/home/mpi/maschinepi/projects
 EOF
 chown -R 1000:1000 "$root/home/mpi"
 
+install -d -m 755 "$root/usr/share/mpi-station/samples"
+cp -a "$release_tree/external/maschinepi-te/samples/." \
+  "$root/usr/share/mpi-station/samples/"
+
 install -d -m 755 "$root/etc/sysctl.d" "$root/etc/udev/rules.d"
 cat > "$root/etc/sysctl.d/99-realtime-audio.conf" <<'EOF'
 vm.swappiness=10
@@ -120,6 +125,9 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1600", MODE="0660
 EOF
 
 install -d -m 755 "$root/etc/systemd/system/multi-user.target.wants"
+install -d -m 755 "$root/etc/systemd/system/local-fs.target.wants"
+ln -sfn /etc/systemd/system/mpi-prepare-data.service \
+  "$root/etc/systemd/system/local-fs.target.wants/mpi-prepare-data.service"
 ln -sfn /lib/systemd/system/ssh.service \
   "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
 ln -sfn /etc/systemd/system/mode-selector.target "$root/etc/systemd/system/default.target"
