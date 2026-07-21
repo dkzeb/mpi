@@ -1,0 +1,9 @@
+[submodule "external/libmk3"]
+	path = external/libmk3
+	url = git@github.com:dkzeb/libmk3.git
+[submodule "external/mixxx-mk3"]
+	path = external/mixxx-mk3
+	url = git@github.com:dkzeb/mixxx-mk3.git
+[submodule "external/maschinepi-te"]
+	path = external/maschinepi-te
+	url = git@github.com:dkzeb/maschinepi-te.git
