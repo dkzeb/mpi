@@ -32,6 +32,10 @@ MPI_BUILD_TMPDIR=/dev/shm ./image/inspect-image.sh \
 
 ## 2. Flash and provision
 
+Use a 16 GB or larger card when MaschinePI will be built on first boot. An 8 GB
+card is only suitable when an ARM64 MaschinePI binary was injected at image
+build time.
+
 Prefer Raspberry Pi Imager's “Use custom image” flow. If using `dd`, identify
 the SD-card device carefully; the output device is overwritten:
 
