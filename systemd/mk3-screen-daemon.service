@@ -8,6 +8,7 @@ Requires=openbox.service
 [Service]
 Type=simple
 Environment=DISPLAY=:99
+ExecStartPre=/bin/bash -c 'while systemctl is-active --quiet mk3-bootsplash.service; do sleep 0.2; done'
 ExecStart=/usr/local/bin/mk3-screen-daemon --resolution 960x272 --fps 15 --no-partial
 Restart=always
 RestartSec=3

@@ -8,6 +8,11 @@ readonly STATE_DIR=/var/lib/mpi-station
 readonly CACHE_DIR=/var/cache/mpi-station
 readonly USER_NAME=mpi
 
+build_jobs="${MPI_BUILD_JOBS:-$(nproc)}"
+if [[ "$build_jobs" -gt 2 ]]; then
+  build_jobs=2
+fi
+
 log() {
   printf '[mpi-station-first-boot] %s\n' "$*"
 }
@@ -68,7 +73,7 @@ if [[ ! -x /usr/local/bin/maschinepi ]]; then
     -DDEV_DESKTOP=OFF \
     -DENABLE_TRACKTION=ON \
     -DBUILD_TOOLS=OFF
-  cmake --build "$CACHE_DIR/maschinepi-build" --target maschinepi -j"$(nproc)"
+  cmake --build "$CACHE_DIR/maschinepi-build" --target maschinepi -j"$build_jobs"
 
   maschinepi_binary=""
   for candidate in \

@@ -53,6 +53,9 @@ for unit in \
   grep -q '^PartOf=mixxx.target$' "$units/$unit"
 done
 
+grep -q 'while systemctl is-active --quiet mk3-bootsplash.service' \
+  "$units/mk3-screen-daemon.service"
+
 if rg -n '^WantedBy=multi-user.target$' "$units"/maschinepi.service "$units"/mixxx.service \
     "$units"/xvfb.service "$units"/openbox.service "$units"/mk3-*.service; then
   echo "Application services must only be wanted by their mode target" >&2
