@@ -1,9 +1,10 @@
 [Unit]
 Description=Select MK3 operating mode at boot
 Documentation=file:/opt/mpi-station/mode-selector/README.md
-After=multi-user.target
+After=local-fs.target
 ConditionPathExists=/var/lib/mpi-station/provisioned
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/mk3-mode-selector
+ExecStart=/usr/local/sbin/mk3-mode-selector --force-menu
+TimeoutStartSec=infinity

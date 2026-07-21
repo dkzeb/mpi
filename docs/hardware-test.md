@@ -59,11 +59,14 @@ When the card is inspected on another Linux machine it exposes four filesystems:
 On the Pi, the last two mount at `/home/mpi/Music` and
 `/home/mpi/maschinepi/samples`; the sample partition already contains the
 pinned starter samples. During the first boot only, their partition boundary is
-adjusted so each receives half of all card space remaining after root.
+adjusted so each receives half of all card space remaining after root. The Pi
+ACT LED repeats three short flashes during this operation. If the MK3 has
+enumerated, both screens show milestone progress through resize, format, sample
+copy, and sync; an absent MK3 does not block preparation.
 
-Normal boot starts the stored default. Hold Shift on the MK3 or a USB keyboard
-during startup to open the selector. D1/D2 choose a mode directly; the encoder
-and push navigate/activate; D8 saves the highlighted default.
+Every boot opens the selector and waits without a timeout for the MK3 to attach.
+D1/D2 choose a mode directly; the encoder and push navigate/activate; D8 saves
+the highlighted default.
 
 ## 3. Verify target ownership and switching
 
@@ -74,8 +77,8 @@ systemctl is-active mixxx.target
 systemctl status maschinepi.service --no-pager
 ```
 
-Expected: default is `mode-selector.target`, MaschinePI target/service are
-active, and Mixxx is inactive.
+Expected after selecting MaschinePI: default is `mode-selector.target`,
+MaschinePI target/service are active, and Mixxx is inactive.
 
 Switch to Mixxx:
 
@@ -119,8 +122,8 @@ sudo mpi-mode-switch --set-default mixxx
 sudo reboot
 ```
 
-Expected: the next boot still has `mode-selector.target` as the system default,
-but the selector isolates `mixxx.target`.
+Expected: the next boot still has `mode-selector.target` as the system default
+and initially highlights Mixxx; activate it to isolate `mixxx.target`.
 
 ## 4. Capture failures
 

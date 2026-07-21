@@ -6,8 +6,8 @@ and boot the selector first:
 - `maschinepi.target` — pulls in the MaschinePI DAW stack; `Conflicts=mixxx.target`.
 - `mixxx.target` — pulls in Xvfb/Openbox/Mixxx/screen-daemon; `Conflicts=maschinepi.target`.
 - `mode-selector.target` — the default boot target; starts `mk3-mode-selector.service`.
-- `mk3-mode-selector.service` — polls MK3 or keyboard Shift, opens the on-device
-  menu when requested, and otherwise starts the stored default.
+- `mk3-mode-selector.service` — opens the on-device menu on every boot and waits
+  without a timeout for a cold MK3 to enumerate.
 
 Switching is `systemctl isolate <target>` — no reboot. The system default is
 `mode-selector.target`; neither app's own auto-start is enabled (the target owns

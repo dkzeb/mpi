@@ -281,6 +281,44 @@ static void render_menu(mk3_t* device, const selector_state_t* state, const char
     free(right);
 }
 
+static void render_status(mk3_t* device, int progress, const char* message)
+{
+    if (!device) return;
+    uint16_t* left = calloc(SCREEN_WIDTH * SCREEN_HEIGHT, sizeof *left);
+    uint16_t* right = calloc(SCREEN_WIDTH * SCREEN_HEIGHT, sizeof *right);
+    if (!left || !right) {
+        free(left);
+        free(right);
+        return;
+    }
+
+    const uint16_t orange = rgb565(255, 105, 0);
+    const uint16_t white = rgb565(235, 235, 235);
+    const uint16_t dim = rgb565(90, 90, 90);
+    char percent[16];
+    char status[96];
+    snprintf(percent, sizeof percent, "%d", progress);
+    uppercase(status, sizeof status, message);
+
+    fill_rect(left, 0, 0, SCREEN_WIDTH, 8, orange);
+    draw_text(left, 28, 38, "SD CARD SETUP", 3, orange);
+    draw_text(left, 30, 98, percent, 8, white);
+    draw_text(left, 30, 190, "PERCENT", 3, dim);
+
+    fill_rect(right, 0, 0, SCREEN_WIDTH, 8, orange);
+    draw_text(right, 24, 38, "PREPARING STORAGE", 3, orange);
+    draw_text(right, 24, 102, status, 2, white);
+    fill_rect(right, 24, 158, 432, 30, dim);
+    fill_rect(right, 28, 162, (424 * progress) / 100, 22, orange);
+    draw_text(right, 24, 222, "DO NOT POWER OFF", 2, dim);
+
+    mk3_display_disable_partial_rendering(device, true);
+    (void)mk3_display_draw(device, 0, left);
+    (void)mk3_display_draw(device, 1, right);
+    free(left);
+    free(right);
+}
+
 static void print_console_menu(const selector_state_t* state)
 {
     fprintf(stderr, "\nMK3 mode selector (controller display unavailable)\n");
@@ -391,6 +429,105 @@ static mk3_t* open_mk3(selector_state_t* state)
     return device;
 }
 
+static bool read_status(const char* path, int* progress, char* message,
+                        size_t message_size, bool* done, bool* failed)
+{
+    FILE* file = fopen(path, "r");
+    if (!file) return false;
+    char line[192];
+    bool result = false;
+    if (fgets(line, sizeof line, file)) {
+        trim(line);
+        if (strcmp(line, "DONE") == 0) {
+            *done = true;
+            result = true;
+        } else if (strcmp(line, "ERROR") == 0) {
+            *done = true;
+            *failed = true;
+            result = true;
+        } else {
+            char* separator = strchr(line, '|');
+            if (separator) {
+                *separator = '\0';
+                char* end = NULL;
+                long value = strtol(line, &end, 10);
+                if (end && *end == '\0') {
+                    if (value < 0) value = 0;
+                    if (value > 100) value = 100;
+                    *progress = (int)value;
+                    snprintf(message, message_size, "%s", separator + 1);
+                    trim(message);
+                    result = true;
+                }
+            }
+        }
+    }
+    fclose(file);
+    return result;
+}
+
+static void mark_status_ready(const char* path)
+{
+    if (!path) return;
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd >= 0) close(fd);
+}
+
+static int run_status_display(selector_state_t* state, const char* status_file,
+                              const char* ready_file, bool dry_run)
+{
+    int progress = 0;
+    int rendered_progress = -1;
+    char message[96] = "PREPARING STORAGE";
+    char rendered_message[96] = "";
+    bool done = false;
+    bool failed = false;
+    (void)read_status(status_file, &progress, message, sizeof message, &done, &failed);
+
+    if (dry_run) {
+        printf("status %d %s%s\n", progress, message,
+               failed ? " error" : done ? " done" : "");
+        return 0;
+    }
+
+    if (ready_file) unlink(ready_file);
+    mk3_t* device = NULL;
+    int64_t next_open = 0;
+    while (!done) {
+        (void)read_status(status_file, &progress, message, sizeof message, &done, &failed);
+        if (done) break;
+
+        if (!device && monotonic_ms() >= next_open) {
+            device = open_mk3(state);
+            next_open = monotonic_ms() + 250;
+            if (device) {
+                mark_status_ready(ready_file);
+                rendered_progress = -1;
+            }
+        }
+        if (device && (progress != rendered_progress ||
+                       strcmp(message, rendered_message) != 0)) {
+            render_status(device, progress, message);
+            rendered_progress = progress;
+            snprintf(rendered_message, sizeof rendered_message, "%s", message);
+        }
+        if (device && mk3_input_poll_ex(device) < 0) {
+            mk3_close(device);
+            device = NULL;
+        }
+        usleep(50000);
+    }
+
+    if (device) {
+        render_status(device, failed ? progress : 100,
+                      failed ? "STORAGE ERROR" : "STORAGE READY");
+        usleep(failed ? 2000000 : 400000);
+        mk3_close(device);
+    }
+    if (ready_file) unlink(ready_file);
+    return 0;
+}
+
 static int select_by_name(selector_state_t* state, const char* name)
 {
     char candidate[64];
@@ -423,6 +560,8 @@ int main(int argc, char** argv)
     const char* config = DEFAULT_CONFIG;
     const char* direct_mode = NULL;
     const char* set_mode = NULL;
+    const char* status_file = NULL;
+    const char* status_ready_file = NULL;
     bool dry_run = false;
     bool force_menu = false;
     int poll_ms = 1800;
@@ -431,17 +570,22 @@ int main(int argc, char** argv)
         if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) config = argv[++i];
         else if (strcmp(argv[i], "--select") == 0 && i + 1 < argc) direct_mode = argv[++i];
         else if (strcmp(argv[i], "--set-default") == 0 && i + 1 < argc) set_mode = argv[++i];
+        else if (strcmp(argv[i], "--status-file") == 0 && i + 1 < argc) status_file = argv[++i];
+        else if (strcmp(argv[i], "--status-ready-file") == 0 && i + 1 < argc) status_ready_file = argv[++i];
         else if (strcmp(argv[i], "--poll-ms") == 0 && i + 1 < argc) poll_ms = atoi(argv[++i]);
         else if (strcmp(argv[i], "--dry-run") == 0) dry_run = true;
         else if (strcmp(argv[i], "--force-menu") == 0) force_menu = true;
         else {
             fprintf(stderr, "Usage: %s [--config FILE] [--dry-run] [--force-menu] "
-                            "[--poll-ms N] [--select MODE] [--set-default MODE]\n", argv[0]);
+                            "[--poll-ms N] [--select MODE] [--set-default MODE] "
+                            "[--status-file FILE [--status-ready-file FILE]]\n", argv[0]);
             return 2;
         }
     }
 
     selector_state_t state = {0};
+    if (status_file)
+        return run_status_display(&state, status_file, status_ready_file, dry_run);
     if (load_config(config, &state) != 0) return 1;
     if (set_mode) {
         if (select_by_name(&state, set_mode) != 0) return 2;

@@ -12,7 +12,7 @@ Let a single Pi 4 + MK3 rig run either system:
 - **MaschinePI** — headless DAW (JUCE/Tracktion), C++ MK3 driver renders directly to the two MK3 screens.
 - **MixxxDJ** — Mixxx 2.6 (Qt6) rendered into a virtual X display and mirrored to the MK3 screens.
 
-Selection happens on the MK3 itself: normal power-on boots the stored default mode; holding **Shift** at power-on brings up an on-screen menu to choose the mode and set the default. Switching modes must not require re-flashing and should be as fast as possible.
+Selection happens on the MK3 itself: normal power-on waits for the controller and brings up an on-screen menu to choose the mode. The stored default determines the initial highlight. Switching modes must not require re-flashing and should be as fast as possible.
 
 The build and the mode/OTA machinery live in a **separate integrator repo** that consumes `libmk3`, `mixxx-mk3`, and `maschinepi-te` as git submodules and produces the flashable image. The existing Mixxx **git-based OTA** (in-place `git pull` updates, no reflash) must be preserved and generalized to both modes.
 
@@ -72,28 +72,33 @@ Two mutually exclusive targets, each `Conflicts=` the other so `isolate` cleanly
 The system default target is **`mode-selector.target`** (see below), which decides which mode target to isolate into.
 
 ### Boot flow (no reboot to switch)
-1. Base boots to a minimal `mode-selector.target`.
-2. `mk3-mode-selector` (oneshot service) inits USB and polls **MK3 Shift** *and* **USB-keyboard Shift** (`/dev/input`) for ~1s.
-3. **Shift not held** → read stored `default_mode` → `systemctl isolate <target>`. No menu appears.
-4. **Shift held** → render the menu on the MK3 screens; wait for input; on selection `systemctl isolate <target>`.
+1. Base boots to a minimal `mode-selector.target` after local filesystems are ready.
+2. `mk3-mode-selector` (oneshot service) retries USB initialization until the MK3 is available; this deliberately accommodates cold controller startup.
+3. Render the menu on the MK3 screens with the stored `default_mode` highlighted, then wait without a timeout.
+4. On selection, release the MK3 and `systemctl isolate <target>`.
 5. Runtime re-selection: a "switch mode" action available from within either app (and re-invocable by re-running the selector) isolates the other target — still no reboot.
 
 ### Mode selector UX (MK3)
-Menu is only drawn when explicitly summoned by Shift (deliberate interruption → no auto-timeout).
+The menu is drawn on every boot and has no auto-timeout.
 
 - **4D encoder turn** → move highlight; **push** → activate highlighted mode.
 - **D1–D8** → direct "activate mode N" keys (F1–F8 style). D1 = MaschinePI, D2 = Mixxx; remaining slots reserved for future modes.
 - **Set-as-default action** (e.g. hold-encoder) → writes `default_mode` to the config store.
 - Optional **Shutdown** / **re-open-selector** actions.
-- Input sources: MK3 Shift **or** keyboard Left/Right-Shift (resilience if the MK3 has not enumerated yet or when bench-testing).
+- Keyboard arrows, number keys, Enter, and D provide a bench-testing fallback.
+
+On a fresh card, storage preparation owns the MK3 first when available and shows
+coarse but truthful milestones for partition resizing, both formats, starter
+sample copying, and final sync. The Pi ACT LED simultaneously repeats three
+short flashes. Storage preparation continues if no MK3 is attached; the selector
+then waits for it normally.
 
 **Visual language (base mockup provided 2026-07-21).** The selector/loader adopts the existing MaschinePI boot-splash style (`pi-tools/mk3-boot-display.c`): dark background, single orange accent, monospace type, using both 480×272 screens:
 - **Left screen** = identity: logo / waveform motif and a bottom **status line** (e.g. `Booting … | Initializing system | Starting audio engine : 3.0`).
 - **Right screen** = progress: a `LOADING <MODE>` label, orange progress bar, and percentage.
 
 **Decision: per-mode branding, no separate "station" identity.** The selector is invisible chrome that wears whichever mode's brand is relevant — it reuses the two splashes that already exist rather than inventing a third integrator brand. Applied:
-- **Fast default-boot** → show the chosen mode's own splash (MaschinePI's existing one; Mixxx's `bootsplash-left`), so the invisible path looks like a normal branded boot.
-- **Shift menu** → the left screen mirrors the **highlighted mode's** identity/brand (swapping as you scroll); the right screen shows the selectable mode list + progress once a mode is activating.
+- **Boot menu** → the left screen mirrors the **highlighted mode's** identity/brand (swapping as you scroll); the right screen shows the selectable mode list + progress once a mode is activating.
 - The **update-available notification** lives in the left-screen status line (and/or a small badge), matching this style — never a foreign dialog.
 
 Mockup asset should live in the integrator repo (e.g. `assets/`) alongside the per-mode splashes.
@@ -186,15 +191,15 @@ The `mk3-mode-selector` binary builds against the unified `libmk3` submodule (C)
 
 1. **Shared-component collisions.** Both provisioners touch PipeWire config, `99-mk3` udev rules, and boot splash. Validate that the fused image ends with one coherent set (test both modes' audio + MK3 access after a clean build).
 2. **PipeWire model mismatch.** Mixxx enables PipeWire as a **user** service with lingering; MaschinePI's tuning may assume system-level. Pick one model (user-level with lingering is the Mixxx assumption) and make both modes' profiles work under it.
-3. **MK3 enumeration timing** in the selector window — the ~1s Shift poll must not miss a held Shift on a cold USB bring-up. Keyboard-Shift fallback mitigates; tune the poll window.
+3. **MK3 enumeration timing** — the selector must keep retrying through cold USB bring-up without delaying first-boot storage preparation indefinitely when the controller is absent.
 4. **Clean teardown on isolate.** Switching from Mixxx must fully stop Xvfb/Openbox/Mixxx/screen-daemon and release the MK3 + audio device before MaschinePI claims them (and vice-versa). Verify via `Conflicts=` + explicit device-release ordering.
 5. **Image size / surface.** One rootfs now carries Qt/X/Mixxx/Python/Tailscale/Samba *and* JUCE/Tracktion. Acceptable (dormant services have no RT impact) but note the larger update surface.
 
 ## Testing
 
-- Boot with no Shift → lands in stored default mode; app live on MK3.
-- Boot holding MK3 Shift → menu renders; encoder + D1/D2 select each mode; "set default" persists across reboot.
-- Boot holding keyboard Shift (MK3 unplugged at boot) → menu still reachable.
+- Boot with a cold MK3 → selector waits for enumeration and renders the menu.
+- Encoder + D1/D2 select each mode; "set default" persists the initial highlight across reboot.
+- First boot → ACT LED and, when attached, MK3 screens report storage preparation; partitions receive equal shares of the card remainder.
 - Switch MaschinePI → Mixxx and back → audio routing correct each time (master on MK3, cue on Pi jack for Mixxx; DAW profile for MaschinePI), MK3 owned by exactly one consumer.
 - Verify no reboot occurs on switch and prior mode's services are fully stopped.
 
@@ -212,8 +217,7 @@ The `mk3-mode-selector` binary builds against the unified `libmk3` submodule (C)
 
 ## Resolved defaults (from brainstorming)
 
-- Selector always runs first but is invisible unless Shift is held.
-- No auto-timeout once the menu is summoned (deliberate interruption).
-- Shift = MK3 Shift **or** keyboard Shift.
+- Selector always runs first and always displays the menu once the MK3 attaches.
+- No auto-timeout.
 - D1–D8 = direct mode-activate keys; D1 = MaschinePI, D2 = Mixxx.
 - Default is a persisted config value, editable from the menu.

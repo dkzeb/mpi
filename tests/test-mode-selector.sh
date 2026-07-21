@@ -28,4 +28,12 @@ if "$selector" --config "$config" --dry-run --select '../bad' 2>/dev/null; then
   exit 1
 fi
 
+printf '45|FORMATTING LIBRARY\n' > "$tmp_dir/status"
+output="$($selector --config "$config" --dry-run --status-file "$tmp_dir/status")"
+[[ "$output" == 'status 45 FORMATTING LIBRARY' ]]
+
+printf 'ERROR\n' > "$tmp_dir/status"
+output="$($selector --dry-run --status-file "$tmp_dir/status")"
+[[ "$output" == 'status 0 PREPARING STORAGE error' ]]
+
 echo "mode selector behavior: PASS"

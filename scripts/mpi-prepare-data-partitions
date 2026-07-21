@@ -6,6 +6,143 @@ readonly READY_MARKER="$STATE_DIR/data-layout-ready"
 readonly SAMPLE_SEED=/usr/share/mpi-station/samples
 readonly SECTORS_PER_MIB=2048
 readonly MIN_PARTITION_SECTORS=$((256 * SECTORS_PER_MIB))
+readonly STATUS_LED_ROOT="${MPI_STATUS_LED_ROOT:-/sys/class/leds}"
+
+status_led=""
+status_led_pid=""
+status_led_original_trigger=""
+status_led_original_brightness=""
+status_led_max_brightness=1
+mk3_status_file=""
+mk3_status_ready_file=""
+mk3_status_pid=""
+mixxx_mount=""
+samples_mount=""
+
+update_mk3_status() {
+  local progress="$1"
+  local message="$2"
+  [[ -n "$mk3_status_file" ]] || return
+  printf '%s|%s\n' "$progress" "$message" > "$mk3_status_file.tmp"
+  mv -f "$mk3_status_file.tmp" "$mk3_status_file"
+}
+
+start_mk3_status() {
+  local attempt
+  [[ -x /usr/local/sbin/mk3-mode-selector ]] || return
+
+  mk3_status_file=/run/mpi-station-data-status
+  mk3_status_ready_file=/run/mpi-station-data-status.ready
+  rm -f "$mk3_status_file" "$mk3_status_file.tmp" "$mk3_status_ready_file"
+  update_mk3_status 5 "WAITING FOR MK3"
+  /usr/local/sbin/mk3-mode-selector \
+    --status-file "$mk3_status_file" \
+    --status-ready-file "$mk3_status_ready_file" &
+  mk3_status_pid=$!
+
+  # A cold MK3 needs a moment to enumerate. Do not hold boot indefinitely when
+  # the controller is intentionally disconnected; the selector retries later.
+  for attempt in {1..30}; do
+    [[ -e "$mk3_status_ready_file" ]] && break
+    kill -0 "$mk3_status_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+}
+
+stop_mk3_status() {
+  local terminal_status="$1"
+  local attempt
+  if [[ -n "$mk3_status_pid" ]]; then
+    printf '%s\n' "$terminal_status" > "$mk3_status_file" 2>/dev/null || true
+    for attempt in {1..20}; do
+      kill -0 "$mk3_status_pid" 2>/dev/null || break
+      sleep 0.1
+    done
+    kill "$mk3_status_pid" 2>/dev/null || true
+    wait "$mk3_status_pid" 2>/dev/null || true
+    mk3_status_pid=""
+  fi
+  [[ -z "$mk3_status_file" ]] || rm -f "$mk3_status_file" "$mk3_status_file.tmp"
+  [[ -z "$mk3_status_ready_file" ]] || rm -f "$mk3_status_ready_file"
+  mk3_status_file=""
+  mk3_status_ready_file=""
+}
+
+start_status_led() {
+  local candidate led_name
+
+  for candidate in \
+    "$STATUS_LED_ROOT/ACT" "$STATUS_LED_ROOT/act" "$STATUS_LED_ROOT/led0" \
+    "$STATUS_LED_ROOT"/*; do
+    [[ -d "$candidate" && -w "$candidate/brightness" ]] || continue
+    led_name="${candidate##*/}"
+    led_name="${led_name,,}"
+    if [[ "$led_name" == act || "$led_name" == led0 || "$led_name" == *:act ]]; then
+      status_led="$candidate"
+      break
+    fi
+  done
+
+  if [[ -z "$status_led" ]]; then
+    echo "No controllable Raspberry Pi ACT LED found; continuing without status flashes"
+    return
+  fi
+
+  status_led_original_brightness="$(cat "$status_led/brightness")"
+  status_led_max_brightness="$(cat "$status_led/max_brightness" 2>/dev/null || echo 1)"
+  if [[ -r "$status_led/trigger" && -w "$status_led/trigger" ]]; then
+    status_led_original_trigger="$(sed -n 's/.*\[\([^]]*\)\].*/\1/p' "$status_led/trigger")"
+    printf '%s\n' none > "$status_led/trigger"
+  fi
+
+  echo "ACT LED pattern: three short flashes while SD-card data layout is prepared"
+  (
+    trap 'exit 0' INT TERM
+    while :; do
+      for _pulse in 1 2 3; do
+        printf '%s\n' "$status_led_max_brightness" > "$status_led/brightness" || exit 0
+        sleep 0.12
+        printf '0\n' > "$status_led/brightness" || exit 0
+        sleep 0.12
+      done
+      sleep 0.7
+    done
+  ) &
+  status_led_pid=$!
+}
+
+stop_status_led() {
+  if [[ -n "$status_led_pid" ]]; then
+    kill "$status_led_pid" 2>/dev/null || true
+    wait "$status_led_pid" 2>/dev/null || true
+    status_led_pid=""
+  fi
+  [[ -n "$status_led" ]] || return
+
+  printf '0\n' > "$status_led/brightness" 2>/dev/null || true
+  if [[ -n "$status_led_original_trigger" && -w "$status_led/trigger" ]]; then
+    printf '%s\n' "$status_led_original_trigger" > "$status_led/trigger" 2>/dev/null || true
+  elif [[ -n "$status_led_original_brightness" ]]; then
+    printf '%s\n' "$status_led_original_brightness" > "$status_led/brightness" 2>/dev/null || true
+  fi
+  status_led=""
+}
+
+cleanup() {
+  local result=$?
+  if ((result == 0)); then
+    stop_mk3_status DONE
+  else
+    stop_mk3_status ERROR
+  fi
+  stop_status_led
+  [[ -n "$samples_mount" ]] && mountpoint -q "$samples_mount" && umount "$samples_mount" || true
+  [[ -n "$mixxx_mount" ]] && mountpoint -q "$mixxx_mount" && umount "$mixxx_mount" || true
+  [[ -n "$samples_mount" ]] && rmdir "$samples_mount" 2>/dev/null || true
+  [[ -n "$mixxx_mount" ]] && rmdir "$mixxx_mount" 2>/dev/null || true
+  return "$result"
+}
+trap cleanup EXIT
 
 calculate_layout() {
   local disk_sectors="$1"
@@ -72,6 +209,9 @@ read -r p3_start p3_size p4_start p4_size < <(
   calculate_layout "$disk_sectors" "$data_start"
 )
 
+start_status_led
+start_mk3_status
+update_mk3_status 15 "RESIZING PARTITIONS"
 echo "Dividing SD-card remainder: MIXXX_LIBRARY=$p3_size sectors, MPI_SAMPLES=$p4_size sectors"
 printf '%s,%s,83\n' "$p3_start" "$p3_size" | \
   sfdisk --no-reread --force -N 3 "$disk"
@@ -82,27 +222,24 @@ partx --update --nr 3 "$disk"
 partx --update --nr 4 "$disk"
 udevadm settle
 
+update_mk3_status 45 "FORMATTING LIBRARY"
 mkfs.ext4 -q -F -L MIXXX_LIBRARY "$p3_device"
+update_mk3_status 60 "FORMATTING SAMPLES"
 mkfs.ext4 -q -F -L MPI_SAMPLES "$p4_device"
 
 mixxx_mount="$(mktemp -d /run/mpi-mixxx-library.XXXXXX)"
 samples_mount="$(mktemp -d /run/mpi-samples.XXXXXX)"
-cleanup() {
-  mountpoint -q "$samples_mount" && umount "$samples_mount" || true
-  mountpoint -q "$mixxx_mount" && umount "$mixxx_mount" || true
-  rmdir "$mixxx_mount" "$samples_mount" 2>/dev/null || true
-}
-trap cleanup EXIT
 
 mount "$p3_device" "$mixxx_mount"
 mount "$p4_device" "$samples_mount"
+update_mk3_status 75 "COPYING STARTER SAMPLES"
 printf '%s\n' 'Mixxx library partition - copy music files here.' > "$mixxx_mount/README.txt"
 cp -a "$SAMPLE_SEED/." "$samples_mount/"
 chown -R 1000:1000 "$mixxx_mount" "$samples_mount"
+update_mk3_status 95 "SYNCING STORAGE"
 sync
-cleanup
-trap - EXIT
 
 install -d -m 755 "$STATE_DIR"
 touch "$READY_MARKER"
+update_mk3_status 100 "STORAGE READY"
 echo "Data partitions are ready"

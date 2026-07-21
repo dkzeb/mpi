@@ -64,6 +64,10 @@ grep -q '^Before=mixxx.service .*mk3-overlay.service$' \
 grep -q 'mk3-hid-rebind.service' "$units/mixxx.target"
 grep -q '^Before=home-mpi-Music.mount home-mpi-maschinepi-samples.mount local-fs.target$' \
   "$units/mpi-prepare-data.service"
+grep -q '^ExecStart=/usr/local/sbin/mk3-mode-selector --force-menu$' \
+  "$units/mk3-mode-selector.service"
+grep -q '^TimeoutStartSec=infinity$' "$units/mk3-mode-selector.service"
+grep -q '^Requires=basic.target local-fs.target$' "$units/mode-selector.target"
 
 if rg -n 'XDG_RUNTIME_DIR=/run/user/%U|PIPEWIRE_RUNTIME_DIR=/run/user/%U' \
     "$units"/*.service; then
