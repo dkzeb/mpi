@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: sudo mpi-mode-switch [--set-default] {maschinepi|mixxx|selector}" >&2
+  exit 2
+}
+
+set_default=0
+if [[ "${1:-}" == "--set-default" ]]; then
+  set_default=1
+  shift
+fi
+
+mode="${1:-}"
+case "$mode" in
+  maschinepi|mixxx) target="${mode}.target" ;;
+  selector) target="mode-selector.target" ;;
+  *) usage ;;
+esac
+
+if [[ "$set_default" == 1 ]]; then
+  [[ "$mode" != selector ]] || usage
+  install -d -m 755 /var/lib/mk3-mode
+  printf 'default_mode=%s\nslot1=maschinepi.target|MaschinePI\nslot2=mixxx.target|MixxxDJ\n' "$mode" \
+    > /var/lib/mk3-mode/config
+fi
+
+exec systemctl isolate "$target"

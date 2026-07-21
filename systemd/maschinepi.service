@@ -1,0 +1,31 @@
+[Unit]
+Description=MaschinePI DAW application
+Documentation=https://github.com/dkzeb/maschinepi-te
+PartOf=maschinepi.target
+Conflicts=mixxx.target
+After=sound.target maschinepi-audio-profile.service
+Requires=maschinepi-audio-profile.service
+
+[Service]
+Type=simple
+User=mpi
+Group=audio
+SupplementaryGroups=pipewire plugdev
+Environment=HOME=/home/mpi
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=PIPEWIRE_RUNTIME_DIR=/run/user/%U
+Environment=PIPEWIRE_LATENCY=64/48000
+ExecStart=/usr/local/bin/maschinepi
+Restart=on-failure
+RestartSec=5
+Nice=-10
+IOSchedulingClass=realtime
+IOSchedulingPriority=0
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=50
+LimitRTPRIO=95
+LimitMEMLOCK=infinity
+PrivateDevices=no
+
+[Install]
+WantedBy=maschinepi.target

@@ -1,0 +1,21 @@
+[Unit]
+Description=Mixxx Openbox window manager
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=xvfb.service
+Requires=xvfb.service
+
+[Service]
+Type=simple
+User=mpi
+Environment=HOME=/home/mpi
+Environment=DISPLAY=:99
+Environment=XCURSOR_THEME=DMZ-White
+Environment=XCURSOR_SIZE=24
+ExecStart=/usr/bin/openbox
+ExecStartPost=/usr/bin/xsetroot -cursor_name left_ptr
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=mixxx.target

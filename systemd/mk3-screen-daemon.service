@@ -1,0 +1,16 @@
+[Unit]
+Description=Mixxx MK3 screen mirroring daemon
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=openbox.service mk3-bootsplash.service
+Requires=openbox.service
+
+[Service]
+Type=simple
+Environment=DISPLAY=:99
+ExecStart=/usr/local/bin/mk3-screen-daemon --resolution 960x272 --fps 15 --no-partial
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=mixxx.target

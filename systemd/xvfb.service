@@ -1,0 +1,14 @@
+[Unit]
+Description=Mixxx virtual framebuffer
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/Xvfb :99 -screen 0 960x272x24 -ac
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=mixxx.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply MixxxDJ audio profile
+PartOf=mixxx.target
+Conflicts=maschinepi.target maschinepi-audio-profile.service
+After=user@1000.service
+Wants=user@1000.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mpi-audio-profile mixxx
+ExecStop=/usr/local/sbin/mpi-audio-profile reset
+RemainAfterExit=yes

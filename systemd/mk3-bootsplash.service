@@ -1,0 +1,13 @@
+[Unit]
+Description=Mixxx MK3 boot splash
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/opt/mpi-station/external/mixxx-mk3/pi-setup/mk3-bootsplash.sh
+TimeoutStopSec=5
+
+[Install]
+WantedBy=mixxx.target

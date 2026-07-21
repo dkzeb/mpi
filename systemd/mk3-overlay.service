@@ -1,0 +1,19 @@
+[Unit]
+Description=Mixxx MK3 overlay widget system
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=openbox.service mixxx.service
+Requires=openbox.service
+
+[Service]
+Type=simple
+User=mpi
+Environment=DISPLAY=:99
+Environment=HOME=/home/mpi
+WorkingDirectory=/opt/mpi-station/external/mixxx-mk3/pi-setup
+ExecStart=/usr/bin/python3 -m mk3_overlay.daemon
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=mixxx.target

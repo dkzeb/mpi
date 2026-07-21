@@ -1,0 +1,8 @@
+[Unit]
+Description=MaschinePI DAW mode
+Documentation=file:/opt/mpi-station/README.md
+Requires=multi-user.target
+After=multi-user.target
+Wants=maschinepi-audio-profile.service maschinepi.service
+Conflicts=mixxx.target
+AllowIsolate=yes

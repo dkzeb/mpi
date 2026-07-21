@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly CONFIG=/var/lib/mk3-mode/config
+mode="$(sed -n 's/^[[:space:]]*default_mode[[:space:]]*=[[:space:]]*//p' "$CONFIG" 2>/dev/null | head -n1)"
+mode="${mode%.target}"
+
+case "$mode" in
+  maschinepi|mixxx) ;;
+  *)
+    logger -t mpi-mode-select "Invalid or missing default_mode '$mode'; using maschinepi"
+    mode=maschinepi
+    ;;
+esac
+
+logger -t mpi-mode-select "Activating ${mode}.target"
+exec systemctl --no-block isolate "${mode}.target"

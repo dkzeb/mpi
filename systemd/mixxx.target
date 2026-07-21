@@ -1,0 +1,11 @@
+[Unit]
+Description=MixxxDJ mode
+Documentation=file:/opt/mpi-station/README.md
+Requires=multi-user.target
+After=multi-user.target
+Wants=mixxx-audio-profile.service xvfb.service openbox.service
+Wants=mk3-bootsplash.service mixxx.service mk3-screen-daemon.service
+Wants=mk3-t9-daemon.service mk3-mouse-daemon.service mk3-overlay.service
+Wants=mk3-headphone-mirror.service
+Conflicts=maschinepi.target
+AllowIsolate=yes

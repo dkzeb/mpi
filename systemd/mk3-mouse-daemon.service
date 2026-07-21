@@ -1,0 +1,17 @@
+[Unit]
+Description=Mixxx MK3 mouse mode daemon
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=xvfb.service mixxx.service
+Requires=xvfb.service
+
+[Service]
+Type=simple
+User=mpi
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/python3 /opt/mpi-station/external/mixxx-mk3/pi-setup/mk3-mouse-daemon.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=mixxx.target

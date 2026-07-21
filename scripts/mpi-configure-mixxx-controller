@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly MIXXX_DIR=/home/mpi/.mixxx
+readonly CFG="$MIXXX_DIR/mixxx.cfg"
+readonly SERIAL_MARKER="$MIXXX_DIR/.mk3-controller-serial"
+
+serial=""
+for device in /sys/bus/usb/devices/*; do
+  [[ -r "$device/idVendor" && -r "$device/idProduct" ]] || continue
+  [[ "$(<"$device/idVendor")" == 17cc && "$(<"$device/idProduct")" == 1600 ]] || continue
+  [[ -r "$device/serial" ]] && serial="$(<"$device/serial")"
+  break
+done
+
+[[ -n "$serial" ]] || exit 0
+[[ -r "$SERIAL_MARKER" && "$(<"$SERIAL_MARKER")" == "$serial" ]] && exit 0
+
+device_name="Maschine_MK3_${serial: -4}_4"
+cat >> "$CFG" <<EOF
+
+[Controller]
+$device_name 1
+
+[ControllerPreset]
+$device_name Native-Instruments-Maschine-MK3.hid.xml
+EOF
+printf '%s\n' "$serial" > "$SERIAL_MARKER"

@@ -1,0 +1,17 @@
+[Unit]
+Description=Mirror Mixxx headphone output to Pi built-in audio
+PartOf=mixxx.target
+Conflicts=maschinepi.target
+After=mixxx.service
+Wants=mixxx.service
+
+[Service]
+Type=simple
+User=mpi
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+ExecStart=/bin/bash /opt/mpi-station/external/mixxx-mk3/pi-setup/mk3-headphone-mirror.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=mixxx.target

@@ -1,0 +1,7 @@
+[Unit]
+Description=MK3 mode selector
+Documentation=file:/opt/mpi-station/README.md
+Requires=multi-user.target
+After=multi-user.target mpi-station-first-boot.service
+Wants=mk3-mode-selector.service
+AllowIsolate=yes
