@@ -36,7 +36,7 @@ custom image* → the `.img.xz` you downloaded), choose your SD card, and write.
 Prefer the command line? On Linux/macOS:
 
 ```bash
-xz -dc mpi-station-YYYYMMDD.img.xz | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
+xz -dc mpi-station-vVERSION.img.xz | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
 Replace `/dev/sdX` with your card device — **double-check it**, `dd` will
@@ -45,7 +45,7 @@ happily overwrite the wrong disk.
 Verify the download first if a `.sha256` is provided:
 
 ```bash
-sha256sum -c mpi-station-YYYYMMDD.img.xz.sha256
+sha256sum -c mpi-station-vVERSION.img.xz.sha256
 ```
 
 ## 3. First boot

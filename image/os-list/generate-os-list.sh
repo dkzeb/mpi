@@ -6,8 +6,8 @@
 # Raspberry Pi Imager custom-repository feature.
 #
 # Usage:
-#   generate-os-list.sh --image path/to/mpi-station-YYYYMMDD.img.xz \
-#                       --url https://host/mpi-station-YYYYMMDD.img.xz \
+#   generate-os-list.sh --image path/to/mpi-station-vVERSION.img.xz \
+#                       --url https://host/mpi-station-vVERSION.img.xz \
 #                       [--icon https://host/icon.png] \
 #                       [--date YYYY-MM-DD] \
 #                       [--output image/os-list/mpi-station.release.json]

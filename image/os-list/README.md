@@ -17,7 +17,7 @@ apply its own first-boot customization.
 ## Release flow
 
 1. Build and compress the image (`image/build-image.sh --compress`).
-2. Upload `mpi-station-YYYYMMDD.img.xz` to the download host (see the main
+2. Upload `mpi-station-vVERSION.img.xz` to the download host (see the main
    README's hosting notes — GitHub Releases, Cloudflare R2, or archive.org).
 3. Generate the release JSON:
 
