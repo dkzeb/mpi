@@ -38,6 +38,15 @@ grep -qx 'default_mode=maschinepi' "$root/var/lib/mk3-mode/config"
 [[ -x "$root/usr/local/sbin/mpi-rebind-mk3-hid" ]]
 [[ -x "$root/usr/local/sbin/mpi-prepare-data-partitions" ]]
 [[ -L "$root/etc/systemd/system/local-fs.target.wants/mpi-prepare-data.service" ]]
+grep -q '^ExecStart=/usr/local/sbin/mk3-mode-selector --force-menu$' \
+  "$root/etc/systemd/system/mk3-mode-selector.service"
+grep -q '^TimeoutStartSec=infinity$' \
+  "$root/etc/systemd/system/mk3-mode-selector.service"
+grep -q '^Before=home-mpi-Music.mount home-mpi-maschinepi-samples.mount local-fs.target$' \
+  "$root/etc/systemd/system/mpi-prepare-data.service"
+grep -q -- '--status-file' "$root/usr/local/sbin/mpi-prepare-data-partitions"
+grep -q 'ACT LED pattern: three short flashes' \
+  "$root/usr/local/sbin/mpi-prepare-data-partitions"
 [[ -f "$root/usr/share/mpi-station/samples/Drums/kick.wav" ]]
 grep -q 'KERNEL=="hidraw\*"' "$root/etc/udev/rules.d/99-mk3-controller.rules"
 [[ -x "$root/usr/local/sbin/mpi-station-provision-rootfs" ]]

@@ -86,6 +86,17 @@ for unit in maschinepi.service mixxx.service xvfb.service openbox.service mk3-sc
   [[ ! -e "$root_mount/etc/systemd/system/multi-user.target.wants/$unit" ]]
 done
 
+grep -q '^ExecStart=/usr/local/sbin/mk3-mode-selector --force-menu$' \
+  "$root_mount/etc/systemd/system/mk3-mode-selector.service"
+grep -q '^TimeoutStartSec=infinity$' \
+  "$root_mount/etc/systemd/system/mk3-mode-selector.service"
+grep -q '^Before=home-mpi-Music.mount home-mpi-maschinepi-samples.mount local-fs.target$' \
+  "$root_mount/etc/systemd/system/mpi-prepare-data.service"
+grep -q -- '--status-file' \
+  "$root_mount/usr/local/sbin/mpi-prepare-data-partitions"
+grep -q 'ACT LED pattern: three short flashes' \
+  "$root_mount/usr/local/sbin/mpi-prepare-data-partitions"
+
 grep -q '^LABEL=MIXXX_LIBRARY /home/mpi/Music ' "$root_mount/etc/fstab"
 grep -q '^LABEL=MPI_SAMPLES /home/mpi/maschinepi/samples ' "$root_mount/etc/fstab"
 [[ "$(e2label "$mixxx_loop")" == MIXXX_LIBRARY ]]
