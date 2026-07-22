@@ -107,6 +107,15 @@ Expected: MaschinePI owns the displays/controller and every listed Mixxx unit is
 inactive. Repeat Mixxx → MaschinePI → Mixxx at least twice to catch delayed USB
 or PipeWire release.
 
+Return to the selector without rebooting when a terminal is available:
+
+```bash
+sudo mpi-mode-switch selector
+```
+
+Without terminal access, reboot or power-cycle; the selector is the default
+boot target and will wait for the MK3 again.
+
 Inspect audio and logs after each transition:
 
 ```bash

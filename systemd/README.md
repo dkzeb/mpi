@@ -22,6 +22,7 @@ For SSH testing on the Pi:
 ```bash
 sudo mpi-mode-switch mixxx
 sudo mpi-mode-switch maschinepi
+sudo mpi-mode-switch selector
 sudo mpi-mode-switch --set-default mixxx
 ```
 
