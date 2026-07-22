@@ -1,43 +1,46 @@
-# AGENTS.md — start here
+# AGENTS.md — contributor guide
 
-This is **mpi-station**, the integrator/delivery repo for the MK3 dual-mode
-initiative: one Raspberry Pi 4 + Maschine MK3 that boots into **either** the
-MusicPI DAW **or** MixxxDJ, chosen at boot by holding Shift.
+This is **dkzeb/mpi**, the integrator / delivery repo for the MusicPI MK3
+dual-mode rig: one Raspberry Pi 4 + Native Instruments Maschine MK3 that boots
+into **either** the MusicPI DAW **or** MixxxDJ, chosen at boot by holding Shift.
+Start from the [README](README.md).
 
-## Current state
+## What this repo does
 
-This repo is a **fresh scaffold**. It currently contains only documentation —
-no submodules, code, units, or image yet. Your job is to execute the Phase 2
-scaffold plan, which stands up the composition (three pinned submodules) and the
-integrator's directory layout.
+It composes three pinned submodules into a single flashable image plus the
+switching machinery neither application repo should own:
 
-## Read in this order
+- `external/libmk3` — shared MK3 driver (single source of truth)
+- `external/mixxx-mk3` — MixxxDJ integration
+- `external/maschinepi-te` — MusicPI DAW
+- `image/` — fused Raspberry Pi OS Lite image build (+ `image/os-list/` for the
+  Raspberry Pi Imager integration)
+- `systemd/`, `mode-selector/` — the mutually exclusive mode targets and selector
+- `ota/` — over-the-air update tooling
+- `config/` — mode config store
 
-1. `docs/specs/2026-07-21-mk3-dual-mode-shared-base-design.md` — the authoritative
-   whole-initiative design. Read it before acting.
-2. `docs/plans/2026-07-21-mpi-station-scaffold.md` — **the plan to execute now**
-   (Phase 2). Bite-sized, TDD-style, exact commands. Use
-   `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
-3. `docs/plans/2026-07-21-libmk3-unification.md` — Phase 1 (DONE), included for
-   history/context. It explains why `libmk3` is the single source of truth and
-   how the pins were established.
-
-## Roadmap (each later phase gets its own plan in `docs/plans/`)
-
-1. libmk3 unification — **DONE**.
-2. **mpi-station scaffold — the current plan.**
-2b. Fused RPi OS Lite image build (image-base approach decided here, not before).
-3. systemd targets + `isolate` switching.
-4. `mk3-mode-selector` binary.
-5. OTA generalization + "update available" notification.
+The authoritative design is in `docs/specs/`. The release process is in
+[RELEASING.md](RELEASING.md); the beta scope in `docs/beta-blocker-triage.md`.
 
 ## Ground rules
 
-- **Never mutate the app repos** (`libmk3`, `mixxx-mk3`, `maschinepi-te`). This
-  repo only *references* them by commit via submodules.
-- **Pinning policy:** submodules are pinned to specific commits, bumped together
-  as a release. Do not set them to track branches.
-- Always clone/update with `--recursive` — `mixxx-mk3` and `maschinepi-te` each
-  nest their own `libmk3` submodule.
-- Phase 2 produces **no** image, units, or binaries. Keep it to composition +
-  docs; defer everything else to its own phase/plan.
+- **Never mutate the application repos in-tree.** `libmk3`, `mixxx-mk3`, and
+  `maschinepi-te` are referenced by commit via submodules. Changes go upstream
+  and are pulled in by bumping the pin — never edit a vendored submodule tree.
+- **Pinning policy:** submodules are pinned to specific commits and bumped
+  together as a release. Do not set them to track branches. OTA advances the
+  pinned set as a unit so every device runs a known-good combination.
+- **Always clone/update with `--recursive`** — `mixxx-mk3` and `maschinepi-te`
+  each nest their own `libmk3` submodule.
+- **Releases follow [RELEASING.md](RELEASING.md).** Images are published as
+  Release assets (never committed to the repo); each release records the exact
+  submodule pins and the image sha256 for reproducibility.
+
+## Build & test
+
+```bash
+git clone --recursive git@github.com:dkzeb/mpi.git && cd mpi
+./scripts/check-submodules.sh
+./image/build-image.sh --base /path/to/raspios-lite-arm64.img.xz --compress
+./tests/test-systemd-modes.sh && ./tests/test-install-rootfs.sh && ./tests/test-mode-selector.sh
+```

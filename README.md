@@ -60,7 +60,7 @@ release is a reproducible combination of three pinned submodules.
 | `mode-selector/` | `mk3-mode-selector` binary |
 | `ota/` | Over-the-air update tooling |
 | `config/` | Mode config store |
-| `docs/specs/`, `docs/plans/` | Authoritative design and per-phase plans |
+| `docs/specs/` | Authoritative design |
 
 ## Build the image yourself (developers)
 
