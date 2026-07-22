@@ -16,7 +16,7 @@ for command_name in cmake ninja aarch64-linux-gnu-gcc aarch64-linux-gnu-g++ pkg-
 done
 
 [[ -f "$source_dir/CMakeLists.txt" ]] || {
-  echo "Missing recursive MaschinePI submodule checkout: $source_dir" >&2
+  echo "Missing recursive MusicPI submodule checkout: $source_dir" >&2
   exit 1
 }
 [[ -f "$source_dir/pi-tools/arm64-compat.h" ]] || {
@@ -74,12 +74,12 @@ for candidate in \
     break
   fi
 done
-[[ -n "$binary" ]] || { echo "Cross-build produced no MaschinePI binary" >&2; exit 1; }
+[[ -n "$binary" ]] || { echo "Cross-build produced no MusicPI binary" >&2; exit 1; }
 file "$binary" | grep -Eq 'ARM aarch64|ARM64' || {
   echo "Cross-build output is not ARM64: $(file "$binary")" >&2
   exit 1
 }
 
 install -D -m 755 "$binary" "$output"
-echo "ARM64 MaschinePI binary: $output"
+echo "ARM64 MusicPI binary: $output"
 file "$output"

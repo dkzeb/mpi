@@ -1,5 +1,5 @@
 [Unit]
-Description=MaschinePI DAW application
+Description=MusicPI DAW application
 Documentation=https://github.com/dkzeb/maschinepi-te
 PartOf=maschinepi.target
 Conflicts=mixxx.target

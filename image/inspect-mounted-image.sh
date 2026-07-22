@@ -113,7 +113,7 @@ echo "Root filesystem space:"
 df -h "$root_mount" | tail -n1
 echo "Mixxx library filesystem:"
 df -h "$mixxx_mount" | tail -n1
-echo "MaschinePI samples filesystem:"
+echo "MusicPI samples filesystem:"
 df -h "$samples_mount" | tail -n1
 
 git config --global --add safe.directory '*'

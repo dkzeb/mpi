@@ -1,5 +1,5 @@
 [Unit]
-Description=Divide SD-card remainder between Mixxx and MaschinePI data
+Description=Divide SD-card remainder between Mixxx and MusicPI data
 DefaultDependencies=no
 After=systemd-remount-fs.service
 Before=home-mpi-Music.mount home-mpi-maschinepi-samples.mount local-fs.target

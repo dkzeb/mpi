@@ -3,13 +3,13 @@
 - **Date:** 2026-07-21
 - **Status:** Approved (pending written-spec review)
 - **Author:** Sebastian Hines
-- **Scope:** Run both the MaschinePI DAW and the MixxxDJ system on one Raspberry Pi 4, selectable from the MK3 controller, without dual-booting.
+- **Scope:** Run both the MusicPI DAW and the MixxxDJ system on one Raspberry Pi 4, selectable from the MK3 controller, without dual-booting.
 
 ## Goal
 
 Let a single Pi 4 + MK3 rig run either system:
 
-- **MaschinePI** — headless DAW (JUCE/Tracktion), C++ MK3 driver renders directly to the two MK3 screens.
+- **MusicPI** — headless DAW (JUCE/Tracktion), C++ MK3 driver renders directly to the two MK3 screens.
 - **MixxxDJ** — Mixxx 2.6 (Qt6) rendered into a virtual X display and mirrored to the MK3 screens.
 
 Selection happens on the MK3 itself: normal power-on waits for the controller and brings up an on-screen menu to choose the mode. The stored default determines the initial highlight. Switching modes must not require re-flashing and should be as fast as possible.
@@ -20,7 +20,7 @@ The build and the mode/OTA machinery live in a **separate integrator repo** that
 
 Both are **stock Raspberry Pi OS Lite (arm64)** workloads that differ only in userspace services. Neither needs a custom kernel, and — critically — neither needs any boot-time (`config.txt`/kernel/dtoverlay) divergence.
 
-### MaschinePI (this repo)
+### MusicPI (this repo)
 - Built as a pi-gen image via `pi-tools/` / `scripts/gen-img.sh`.
 - Runs headless: `maschinepi.service` (systemd) drives the MK3 via a C++ USB driver that renders directly to the screens.
 - Realtime audio via PipeWire; RT tuning is all runtime (`sysctl` swappiness/dirty-ratios, RT priorities, `performance` CPU governor) — see `pi-tools/README.md`.
@@ -82,7 +82,7 @@ The system default target is **`mode-selector.target`** (see below), which decid
 The menu is drawn on every boot and has no auto-timeout.
 
 - **4D encoder turn** → move highlight; **push** → activate highlighted mode.
-- **D1–D8** → direct "activate mode N" keys (F1–F8 style). D1 = MaschinePI, D2 = Mixxx; remaining slots reserved for future modes.
+- **D1–D8** → direct "activate mode N" keys (F1–F8 style). D1 = MusicPI, D2 = Mixxx; remaining slots reserved for future modes.
 - **Set-as-default action** (e.g. hold-encoder) → writes `default_mode` to the config store.
 - Optional **Shutdown** / **re-open-selector** actions.
 - Keyboard arrows, number keys, Enter, and D provide a bench-testing fallback.
@@ -93,7 +93,7 @@ sample copying, and final sync. The Pi ACT LED simultaneously repeats three
 short flashes. Storage preparation continues if no MK3 is attached; the selector
 then waits for it normally.
 
-**Visual language (base mockup provided 2026-07-21).** The selector/loader adopts the existing MaschinePI boot-splash style (`pi-tools/mk3-boot-display.c`): dark background, single orange accent, monospace type, using both 480×272 screens:
+**Visual language (base mockup provided 2026-07-21).** The selector/loader adopts the existing MusicPI boot-splash style (`pi-tools/mk3-boot-display.c`): dark background, single orange accent, monospace type, using both 480×272 screens:
 - **Left screen** = identity: logo / waveform motif and a bottom **status line** (e.g. `Booting … | Initializing system | Starting audio engine : 3.0`).
 - **Right screen** = progress: a `LOADING <MODE>` label, orange progress bar, and percentage.
 
@@ -110,20 +110,20 @@ Mockup asset should live in the integrator repo (e.g. `assets/`) alongside the p
 
 ### MK3 device ownership
 Only one mode is ever active, so only one consumer claims the MK3 USB interfaces at a time:
-- MaschinePI mode → MaschinePI's C++ driver owns HID (iface 4) + display (iface 5).
+- MusicPI mode → MusicPI's C++ driver owns HID (iface 4) + display (iface 5).
 - Mixxx mode → Mixxx/`libmk3` + `mk3-screen-daemon` own them.
 - The selector releases the MK3 before isolating a mode. No simultaneous-claim contention.
 
 ### Audio profiles
 Both modes use the same PipeWire/WirePlumber install; each mode applies its own profile at activation:
-- MaschinePI: DAW quantum/latency + RT priorities + `performance` governor.
+- MusicPI: DAW quantum/latency + RT priorities + `performance` governor.
 - Mixxx: JACK-API routing (master → MK3 USB audio, cue → Pi jack), 48kHz.
 Profiles are applied by the target's units on isolate, and torn down by `Conflicts=` when switching away.
 
 ### Data isolation ("two homes")
 **Decision: a single Linux user with two data dirs** (not a dedicated user per mode). Each system keeps its own state under that one home:
 - Mixxx: `~/.mixxx` (config, DB, mappings, skin), `~/Music` + NAS mount.
-- MaschinePI: its `.mpi` project tree / app data dir.
+- MusicPI: its `.mpi` project tree / app data dir.
 
 Rationale: one user means one PipeWire instance / one `/run/user/UID` / one lingering user (which the Mixxx provisioner already assumes), and minimal `chown`/`User=`/runtime-dir patching in the provisioners and OTA scripts — keeping the systemd-target and OTA machinery (the design's trickiest area) boring. Isolation is logical (separate data dirs, no shared mutable state between modes), not enforced by filesystem permissions. A dedicated-user-per-mode model was considered and rejected: its hard privilege separation is a nice-to-have on a single-purpose rig but would add two user sessions, per-mode ownership handling, and more awkward `isolate` semantics to the central mechanism.
 
@@ -143,7 +143,7 @@ Once this design is planned, the implementation lives in a **new dedicated integ
 
 The integrator repo contains: the two systemd targets, `mode-selector.target`, the `mk3-mode-selector` binary, the fused-image build script, and the generalized OTA tooling. The app repos stay independently developable; the integrator bumps submodule refs to compose a release.
 
-**Migration note:** the mode-switching + selector code being prototyped in `maschinepi-te` should be **migrated into the integrator repo** once planned — it is not long-term MaschinePI-app code.
+**Migration note:** the mode-switching + selector code being prototyped in `maschinepi-te` should be **migrated into the integrator repo** once planned — it is not long-term MusicPI-app code.
 
 ### libmk3 unification & cleanup (foundational — prerequisite)
 
@@ -169,30 +169,30 @@ The image is a **seed**, not the source of truth: it ships with on-device git ch
 - `mk3-check-update.sh` — pre-boot prompt via `mixxx.service` `ExecStartPre`: fetches, and if behind shows a zenity dialog **on the MK3 left screen** (Xvfb + xdotool), PLAY/STOP mapped to Enter/Escape by a Python button reader, 30s auto-skip.
 
 **Generalization for dual-mode:**
-1. OTA pulls the **integrator** repo (advancing its pinned submodules together), then runs each mode's idempotent **re-provision** entrypoint: rebuild-if-changed, reinstall units/binary, restart its service. Mixxx already has such an entrypoint (`mk3-update.sh`); MaschinePI needs an equivalent — it currently ships a pi-gen-baked binary with no OTA path, so an on-device build-or-fetch update path is **new required work**. (Per the pinned policy, components do not each track their own branch; the integrator bump is the unit of update.)
-2. The pre-boot update prompt must work in **both** modes. Mixxx's version depends on Xvfb + zenity, which only exists in Mixxx mode. In MaschinePI mode (headless, no X), the prompt must render via the C++ MK3 driver / `libmk3` instead. Factor the "check + prompt + apply" flow so the render/input backend is swappable per mode.
+1. OTA pulls the **integrator** repo (advancing its pinned submodules together), then runs each mode's idempotent **re-provision** entrypoint: rebuild-if-changed, reinstall units/binary, restart its service. Mixxx already has such an entrypoint (`mk3-update.sh`); MusicPI needs an equivalent — it currently ships a pi-gen-baked binary with no OTA path, so an on-device build-or-fetch update path is **new required work**. (Per the pinned policy, components do not each track their own branch; the integrator bump is the unit of update.)
+2. The pre-boot update prompt must work in **both** modes. Mixxx's version depends on Xvfb + zenity, which only exists in Mixxx mode. In MusicPI mode (headless, no X), the prompt must render via the C++ MK3 driver / `libmk3` instead. Factor the "check + prompt + apply" flow so the render/input backend is swappable per mode.
 3. The `mode-selector` hosts the update check and **surfaces an "update available" notification** (it already owns the MK3 at boot and reads Shift), so the indicator + optional prompt appear before either mode's app starts, independent of X. This is the unified replacement for Mixxx's X/zenity-only `ExecStartPre` prompt. The check must be non-blocking on the fast default-boot path (time-boxed, offline-tolerant).
 
-**Decision: submodule update policy = pinned refs bumped by integrator release.** Each submodule (`libmk3`, `mixxx-mk3`, `maschinepi-te`) is pinned to a specific commit; a release is composed by the integrator bumping those refs and tagging. On-device OTA therefore pulls the **integrator** repo (which advances the pinned submodules together), rather than each component tracking its own branch. Rationale: reproducible, known-good combinations across both modes — essential while libmk3 drift is being reconciled and so a Mixxx change can never silently pull an untested libmk3 under MaschinePI. (Per-component branch tracking is rejected; a "track latest" dev override may be added later if needed, but is not the shipping default.)
+**Decision: submodule update policy = pinned refs bumped by integrator release.** Each submodule (`libmk3`, `mixxx-mk3`, `maschinepi-te`) is pinned to a specific commit; a release is composed by the integrator bumping those refs and tagging. On-device OTA therefore pulls the **integrator** repo (which advances the pinned submodules together), rather than each component tracking its own branch. Rationale: reproducible, known-good combinations across both modes — essential while libmk3 drift is being reconciled and so a Mixxx change can never silently pull an untested libmk3 under MusicPI. (Per-component branch tracking is rejected; a "track latest" dev override may be added later if needed, but is not the shipping default.)
 
 ## Build / packaging
 
 Produce **one** fused RPi OS Lite image from the integrator repo:
-1. Extend the existing MaschinePI pi-gen stage (`pi-tools/`) as the base, OR run the MaschinePI install into a stock RPi OS Lite rootfs.
+1. Extend the existing MusicPI pi-gen stage (`pi-tools/`) as the base, OR run the MusicPI install into a stock RPi OS Lite rootfs.
 2. Run the Mixxx provisioner (`mk3-pi-setup.sh`, adapted for non-interactive/chroot use: skip interactive Tailscale/SMB prompts, parameterize user/paths) into the same rootfs.
 3. Place the on-device git checkouts (integrator repo + submodules) so OTA `git pull` works post-flash.
 4. Install the new units: `maschinepi.target`, `mixxx.target`, `mode-selector.target`, `mk3-mode-selector.service`, and the `mk3-mode-selector` binary.
 5. Set the system default target to `mode-selector.target`; do **not** auto-enable either app's own auto-start (the target owns start-up).
 6. Reconcile shared components installed by both provisioners (PipeWire config, udev `99-mk3` rules, boot splash) so the last-writer is intentional, not accidental.
 
-The `mk3-mode-selector` binary builds against the unified `libmk3` submodule (C) for MK3 render/input, plus evdev keyboard read, and issues `systemctl isolate`. Building on libmk3 directly (rather than MaschinePI's JUCE C++ layer) keeps the selector small and mode-agnostic.
+The `mk3-mode-selector` binary builds against the unified `libmk3` submodule (C) for MK3 render/input, plus evdev keyboard read, and issues `systemctl isolate`. Building on libmk3 directly (rather than MusicPI's JUCE C++ layer) keeps the selector small and mode-agnostic.
 
 ## Risks & validations
 
 1. **Shared-component collisions.** Both provisioners touch PipeWire config, `99-mk3` udev rules, and boot splash. Validate that the fused image ends with one coherent set (test both modes' audio + MK3 access after a clean build).
-2. **PipeWire model mismatch.** Mixxx enables PipeWire as a **user** service with lingering; MaschinePI's tuning may assume system-level. Pick one model (user-level with lingering is the Mixxx assumption) and make both modes' profiles work under it.
+2. **PipeWire model mismatch.** Mixxx enables PipeWire as a **user** service with lingering; MusicPI's tuning may assume system-level. Pick one model (user-level with lingering is the Mixxx assumption) and make both modes' profiles work under it.
 3. **MK3 enumeration timing** — the selector must keep retrying through cold USB bring-up without delaying first-boot storage preparation indefinitely when the controller is absent.
-4. **Clean teardown on isolate.** Switching from Mixxx must fully stop Xvfb/Openbox/Mixxx/screen-daemon and release the MK3 + audio device before MaschinePI claims them (and vice-versa). Verify via `Conflicts=` + explicit device-release ordering.
+4. **Clean teardown on isolate.** Switching from Mixxx must fully stop Xvfb/Openbox/Mixxx/screen-daemon and release the MK3 + audio device before MusicPI claims them (and vice-versa). Verify via `Conflicts=` + explicit device-release ordering.
 5. **Image size / surface.** One rootfs now carries Qt/X/Mixxx/Python/Tailscale/Samba *and* JUCE/Tracktion. Acceptable (dormant services have no RT impact) but note the larger update surface.
 
 ## Testing
@@ -200,7 +200,7 @@ The `mk3-mode-selector` binary builds against the unified `libmk3` submodule (C)
 - Boot with a cold MK3 → selector waits for enumeration and renders the menu.
 - Encoder + D1/D2 select each mode; "set default" persists the initial highlight across reboot.
 - First boot → ACT LED and, when attached, MK3 screens report storage preparation; partitions receive equal shares of the card remainder.
-- Switch MaschinePI → Mixxx and back → audio routing correct each time (master on MK3, cue on Pi jack for Mixxx; DAW profile for MaschinePI), MK3 owned by exactly one consumer.
+- Switch MusicPI → Mixxx and back → audio routing correct each time (master on MK3, cue on Pi jack for Mixxx; DAW profile for MusicPI), MK3 owned by exactly one consumer.
 - Verify no reboot occurs on switch and prior mode's services are fully stopped.
 
 ## Out of scope / deferred
@@ -212,12 +212,12 @@ The `mk3-mode-selector` binary builds against the unified `libmk3` submodule (C)
 ## In scope but sequenced after core planning
 
 - **Integrator repo migration** — stand up the `mpi-station` repo with the three submodules and move the mode-selector/target/OTA code into it. Prototyping may begin in `maschinepi-te`, but the code's home is the integrator repo.
-- **MaschinePI OTA path** — MaschinePI ships a pi-gen-baked binary today with no in-place update; give it a Mixxx-equivalent `update` entrypoint (pull → rebuild/fetch → reinstall → restart) so both modes update without reflash.
+- **MusicPI OTA path** — MusicPI ships a pi-gen-baked binary today with no in-place update; give it a Mixxx-equivalent `update` entrypoint (pull → rebuild/fetch → reinstall → restart) so both modes update without reflash.
 - **X-independent update prompt** — refactor the pre-boot update check/prompt so its render+input backend is swappable, working headless (C++ driver / `libmk3`) as well as under Xvfb/zenity.
 
 ## Resolved defaults (from brainstorming)
 
 - Selector always runs first and always displays the menu once the MK3 attaches.
 - No auto-timeout.
-- D1–D8 = direct mode-activate keys; D1 = MaschinePI, D2 = Mixxx.
+- D1–D8 = direct mode-activate keys; D1 = MusicPI, D2 = Mixxx.
 - Default is a persisted config value, editable from the menu.

@@ -22,7 +22,7 @@ esac
 if [[ "$set_default" == 1 ]]; then
   [[ "$mode" != selector ]] || usage
   install -d -m 755 /var/lib/mk3-mode
-  printf 'default_mode=%s\nslot1=maschinepi.target|MaschinePI\nslot2=mixxx.target|MixxxDJ\n' "$mode" \
+  printf 'default_mode=%s\nslot1=maschinepi.target|MusicPI\nslot2=mixxx.target|MixxxDJ\n' "$mode" \
     > /var/lib/mk3-mode/config
 fi
 

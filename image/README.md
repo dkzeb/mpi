@@ -1,7 +1,7 @@
 # image/ — fused Raspberry Pi OS Lite image build (Phase 2b)
 
 Produces one flashable image with both stacks installed and gated behind the
-systemd mode targets. Phase 2b chose the supported MaschinePI official-image
+systemd mode targets. Phase 2b chose the supported MusicPI official-image
 injection approach: supply a stock Raspberry Pi OS Lite arm64 image and perform
 all compilation, package installation, and provisioning on the host.
 
@@ -23,7 +23,7 @@ recreates them, and restores the bundled samples from the rootfs seed. This
 step is local filesystem setup only: it performs no compilation, package
 download, or application provisioning. `--data-bootstrap-mb` controls only the
 small pre-boot image partitions, not their final on-card sizes.
-MaschinePI, the Mixxx screen tools, and the selector are cross-compiled on the
+MusicPI, the Mixxx screen tools, and the selector are cross-compiled on the
 host. Runtime packages and the pinned Mixxx ARM64 package are installed into the
 mounted rootfs under QEMU. No compilation, package download, or provisioning is
 performed by the Pi. Pass

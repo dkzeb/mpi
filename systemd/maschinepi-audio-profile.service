@@ -1,5 +1,5 @@
 [Unit]
-Description=Apply MaschinePI realtime audio profile
+Description=Apply MusicPI realtime audio profile
 PartOf=maschinepi.target
 Conflicts=mixxx.target mixxx-audio-profile.service
 After=user@1000.service

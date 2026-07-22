@@ -14,13 +14,13 @@ Download a stock Raspberry Pi OS Lite **arm64** image, then run:
   --compress
 ```
 
-To reuse an existing ARM64 MaschinePI binary instead of cross-compiling it, add:
+To reuse an existing ARM64 MusicPI binary instead of cross-compiling it, add:
 
 ```bash
 --maschinepi-binary /path/to/maschinepi
 ```
 
-Without it, the host cross-compiles MaschinePI before assembling the image. The
+Without it, the host cross-compiles MusicPI before assembling the image. The
 build emits the image and a neighboring `.sha256` file. Verify it before flashing:
 
 ```bash
@@ -77,8 +77,8 @@ systemctl is-active mixxx.target
 systemctl status maschinepi.service --no-pager
 ```
 
-Expected after selecting MaschinePI: default is `mode-selector.target`,
-MaschinePI target/service are active, and Mixxx is inactive.
+Expected after selecting MusicPI: default is `mode-selector.target`,
+MusicPI target/service are active, and Mixxx is inactive.
 
 Switch to Mixxx:
 
@@ -91,7 +91,7 @@ systemctl status mixxx.service mk3-screen-daemon.service --no-pager
 
 Expected: Mixxx appears across both MK3 screens, its controller mapping is live,
 master audio uses MK3 outputs, and cue/headphone audio uses the Pi jack. The
-MaschinePI service must be inactive.
+MusicPI service must be inactive.
 
 Switch back:
 
@@ -103,8 +103,8 @@ systemctl is-active mixxx.service xvfb.service openbox.service \
   mk3-overlay.service
 ```
 
-Expected: MaschinePI owns the displays/controller and every listed Mixxx unit is
-inactive. Repeat Mixxx → MaschinePI → Mixxx at least twice to catch delayed USB
+Expected: MusicPI owns the displays/controller and every listed Mixxx unit is
+inactive. Repeat Mixxx → MusicPI → Mixxx at least twice to catch delayed USB
 or PipeWire release.
 
 Return to the selector without rebooting when a terminal is available:

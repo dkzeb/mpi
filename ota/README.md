@@ -7,7 +7,7 @@ checkouts (this integrator repository plus submodules) and updates in place via
 
 - OTA pulls the integrator repository, advancing pinned submodules together,
   then runs each mode's idempotent reprovision entrypoint.
-- MaschinePI needs a new Mixxx-equivalent update entrypoint; it currently ships
+- MusicPI needs a new Mixxx-equivalent update entrypoint; it currently ships
   a pi-gen-baked binary with no OTA path.
 - The pre-boot update check and prompt must work headlessly. Its render/input
   backend therefore needs to be swappable between libmk3 and Xvfb/zenity.

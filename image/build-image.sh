@@ -18,7 +18,7 @@ Usage: image/build-image.sh --base BASE_IMAGE [--output OUTPUT.img]
        [--data-bootstrap-mb N] [--compress] [--force]
 
 BASE_IMAGE may be an uncompressed .img or an .img.xz/.img.gz/.zip image.
-MaschinePI is cross-compiled on the host unless --maschinepi-binary is supplied.
+MusicPI is cross-compiled on the host unless --maschinepi-binary is supplied.
 The default container helper is pi-gen:latest; override MPI_IMAGE_TOOL_IMAGE.
 EOF
   exit 2
@@ -94,17 +94,17 @@ truncate -s "+${extra_mb}M" "$work_image"
 work_dir="$(dirname "$work_image")"
 container_image="${MPI_IMAGE_TOOL_IMAGE:-pi-gen:latest}"
 if [[ -z "$maschinepi_binary" ]]; then
-  echo "Cross-compiling MaschinePI for ARM64"
+  echo "Cross-compiling MusicPI for ARM64"
   "$repo_root/scripts/build-maschinepi-arm64"
   maschinepi_binary="$repo_root/image/output/maschinepi-arm64"
 fi
 maschinepi_binary="$(realpath "$maschinepi_binary")"
 [[ -f "$maschinepi_binary" ]] || {
-  echo "Missing MaschinePI binary: $maschinepi_binary" >&2
+  echo "Missing MusicPI binary: $maschinepi_binary" >&2
   exit 1
 }
 file "$maschinepi_binary" | grep -Eq 'ARM aarch64|ARM64' || {
-  echo "MaschinePI binary is not ARM64: $(file "$maschinepi_binary")" >&2
+  echo "MusicPI binary is not ARM64: $(file "$maschinepi_binary")" >&2
   exit 1
 }
 echo "Cross-compiling Mixxx MK3 helpers for ARM64"

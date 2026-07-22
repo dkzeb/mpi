@@ -3,11 +3,18 @@
 **One Raspberry Pi + Native Instruments Maschine MK3, two instruments.**
 mpi-station builds and ships a single flashable image that boots into either:
 
-- **MaschinePI** — a headless [Tracktion-based DAW / groovebox](https://github.com/dkzeb/maschinepi-te), or
-- **MixxxDJ** — [Mixxx DJ software with full MK3 control](https://github.com/dkzeb/mixxx-mk3),
+- **MusicPI** — a headless Tracktion-based DAW / groovebox, or
+- **MixxxDJ** — Mixxx DJ software with full MK3 control,
 
 chosen at boot by holding **Shift** on the MK3 (or a keyboard). Switch modes,
 reboot, and the same hardware becomes a different instrument.
+
+> **About the name.** MusicPI began as *MaschinePI* — Maschine + Raspberry Pi —
+> born to unleash the Native Instruments Maschine MK3 beyond the software it
+> shipped with, freeing its pads, screens, and knobs as a standalone, portable
+> performance platform that needs no laptop. As the project grew into a whole
+> music machine the letters stayed (**MPI**) but the M now stands for **Music**.
+> This project is a homage to the MK3 that inspired it.
 
 ## Download & flash (recommended)
 
@@ -15,7 +22,7 @@ You do not need to build anything. Grab the latest ready-to-run image and flash
 it to an SD card.
 
 1. **Download** the newest `mpi-station-*.img.xz` from the
-   [Releases page](https://github.com/dkzeb/mpi-station/releases).
+   [Releases page](https://github.com/dkzeb/mpi/releases).
 2. **Flash** it to an SD card (16 GB or larger) with
    [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (choose *Use
    custom image*), [balenaEtcher](https://etcher.balena.io/), or `dd`:
@@ -25,8 +32,8 @@ it to an SD card.
    Replace `/dev/sdX` with your card — double-check it, `dd` is unforgiving.
 3. **Boot** the Pi with the MK3 connected. On first boot the image expands to
    fill the card and provisions two data partitions (your Mixxx library and your
-   MaschinePI samples).
-4. **Pick a mode:** hold **Shift** during boot to choose MixxxDJ or MaschinePI.
+   MusicPI samples).
+4. **Pick a mode:** hold **Shift** during boot to choose MixxxDJ or MusicPI.
 
 ### First boot
 
@@ -47,7 +54,7 @@ release is a reproducible combination of three pinned submodules.
 |---|---|
 | `external/libmk3` | Shared C MK3 driver — single source of truth |
 | `external/mixxx-mk3` | Mixxx provisioning, screen daemon, mappings |
-| `external/maschinepi-te` | MaschinePI DAW and Pi image tooling |
+| `external/maschinepi-te` | MusicPI DAW and Pi image tooling |
 | `image/` | Fused Raspberry Pi OS Lite image build |
 | `systemd/` | Mode targets and selector service |
 | `mode-selector/` | `mk3-mode-selector` binary |
@@ -58,11 +65,14 @@ release is a reproducible combination of three pinned submodules.
 ## Build the image yourself (developers)
 
 ```bash
-git clone --recursive git@github.com:dkzeb/mpi-station.git
-cd mpi-station
+git clone --recursive git@github.com:dkzeb/mpi.git
+cd mpi
 git submodule update --init --recursive        # if not cloned with --recursive
 ./scripts/check-submodules.sh
 ```
+
+> **Component repositories** (MusicPI DAW, MixxxDJ integration, and the libmk3
+> driver) — links to be added on repo publication.
 
 Build a fused image from a stock Raspberry Pi OS Lite (arm64) base. All
 compilation, package installation, and provisioning happen on the host (inside
@@ -97,7 +107,7 @@ combination. See [`ota/README.md`](ota/README.md).
 
 Read [AGENTS.md](AGENTS.md) and the design spec in `docs/specs/` before working
 here. The driver (`external/libmk3`) is canonical
-[libmk3](https://github.com/dkzeb/libmk3) — never edit a vendored copy; changes
+libmk3 — never edit a vendored copy; changes
 go upstream and are pulled in by bumping the pin.
 
 ## License
@@ -110,7 +120,7 @@ scripts) is released under the **GNU General Public License v3.0** — see
 
 The **flashable image** it produces is a *mere aggregation* of separately
 licensed works, each retaining its own license: Raspberry Pi OS, MixxxDJ
-(GPLv2+), MaschinePI (GPLv3), the [libmk3](https://github.com/dkzeb/libmk3)
+(GPLv2+), MusicPI (GPLv3), the libmk3
 driver (MIT), and vendor firmware. Bundling them on one SD card does not
 relicense any of them. GPL permits redistribution and does not prevent accepting
 donations.

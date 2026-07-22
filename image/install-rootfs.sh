@@ -102,7 +102,7 @@ cat > "$root/home/mpi/.config/openbox/rc.xml" <<'EOF'
 </openbox_config>
 EOF
 cat > "$root/home/mpi/maschinepi/maschinepi.conf" <<'EOF'
-# MaschinePI configuration installed by mpi-station
+# MusicPI configuration installed by mpi-station
 samples_dir=/home/mpi/maschinepi/samples
 projects_dir=/home/mpi/maschinepi/projects
 EOF

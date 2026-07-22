@@ -2,7 +2,7 @@
 
 This is **mpi-station**, the integrator/delivery repo for the MK3 dual-mode
 initiative: one Raspberry Pi 4 + Maschine MK3 that boots into **either** the
-MaschinePI DAW **or** MixxxDJ, chosen at boot by holding Shift.
+MusicPI DAW **or** MixxxDJ, chosen at boot by holding Shift.
 
 ## Current state
 

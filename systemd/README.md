@@ -3,7 +3,7 @@
 The implemented integrator-owned units make the two modes mutually exclusive
 and boot the selector first:
 
-- `maschinepi.target` — pulls in the MaschinePI DAW stack; `Conflicts=mixxx.target`.
+- `maschinepi.target` — pulls in the MusicPI DAW stack; `Conflicts=mixxx.target`.
 - `mixxx.target` — pulls in Xvfb/Openbox/Mixxx/screen-daemon; `Conflicts=maschinepi.target`.
 - `mode-selector.target` — the default boot target; starts `mk3-mode-selector.service`.
 - `mk3-mode-selector.service` — opens the on-device menu on every boot and waits

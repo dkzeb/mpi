@@ -17,7 +17,7 @@ output="$($selector --config "$config" --dry-run --select mixxx)"
 
 "$selector" --config "$config" --set-default mixxx
 grep -qx 'default_mode=mixxx' "$config"
-grep -qx 'slot1=maschinepi.target|MaschinePI' "$config"
+grep -qx 'slot1=maschinepi.target|MusicPI' "$config"
 grep -qx 'slot2=mixxx.target|MixxxDJ' "$config"
 
 output="$($selector --config "$config" --dry-run --poll-ms 0)"

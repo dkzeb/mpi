@@ -1,5 +1,5 @@
 [Unit]
-Description=MaschinePI DAW mode
+Description=MusicPI DAW mode
 Documentation=file:/opt/mpi-station/README.md
 Requires=multi-user.target
 After=multi-user.target
