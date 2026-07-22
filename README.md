@@ -1,7 +1,11 @@
-# mpi-station
+<p align="center">
+  <img src="docs/musicpi-logo.png" alt="MusicPI" width="180">
+</p>
+
+<h1 align="center">MusicPI</h1>
 
 **One Raspberry Pi + Native Instruments Maschine MK3, two instruments.**
-mpi-station builds and ships a single flashable image that boots into either:
+MusicPI ships as a single flashable image that boots into either:
 
 - **MusicPI** — a headless Tracktion-based DAW / groovebox, or
 - **MixxxDJ** — Mixxx DJ software with full MK3 control,
@@ -46,8 +50,8 @@ it to an SD card.
 
 ## What this repository is
 
-mpi-station is the **integrator / delivery** repo. It owns what neither
-application repo should: the mutually exclusive systemd mode targets, the
+This repository is MusicPI's **integrator / delivery** repo. It owns what
+neither application repo should: the mutually exclusive systemd mode targets, the
 `mk3-mode-selector`, the fused image build, and over-the-air update tooling. A
 release is a reproducible combination of three pinned submodules.
 

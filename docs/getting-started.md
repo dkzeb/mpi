@@ -25,13 +25,8 @@ making sound.
 
 ## 1. Get the image
 
-Download the latest `mpi-station-*.img.xz` from the
-[Releases page](https://github.com/dkzeb/mpi/releases).
-
-Or, easier — add MusicPI directly to the official
-[Raspberry Pi Imager](https://www.raspberrypi.com/software/): **Choose OS → Use
-custom** and paste the MusicPI image-list URL from the latest release. Imager
-downloads, verifies, and flashes it for you.
+Download the latest `mpi-station-*.img.xz` and its `.sha256` from the
+[Releases page](https://github.com/dkzeb/mpi/releases/).
 
 ## 2. Flash the SD card
 
