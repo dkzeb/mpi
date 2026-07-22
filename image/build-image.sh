@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# mpi-station — fused MK3 dual-mode image builder.
+# Copyright (C) 2026 Sebastian Hines
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License version 3 as published by the Free
+# Software Foundation. See the LICENSE file in the repository root. The image
+# this script produces is a mere aggregation of separately licensed works.
 set -euo pipefail
 
 usage() {
