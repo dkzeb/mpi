@@ -213,10 +213,13 @@ start_status_led
 start_mk3_status
 update_mk3_status 15 "RESIZING PARTITIONS"
 echo "Dividing SD-card remainder: MIXXX_LIBRARY=$p3_size sectors, MPI_SAMPLES=$p4_size sectors"
-printf '%s,%s,83\n' "$p3_start" "$p3_size" | \
-  sfdisk --no-reread --force -N 3 "$disk"
+# Move partition 4 out of partition 3's growth path before enlarging partition
+# 3. Reversing this order makes sfdisk reject the temporary overlap and leaves
+# both data partitions at their bootstrap sizes.
 printf '%s,%s,83\n' "$p4_start" "$p4_size" | \
   sfdisk --no-reread --force -N 4 "$disk"
+printf '%s,%s,83\n' "$p3_start" "$p3_size" | \
+  sfdisk --no-reread --force -N 3 "$disk"
 
 partx --update --nr 3 "$disk"
 partx --update --nr 4 "$disk"

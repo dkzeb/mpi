@@ -23,4 +23,12 @@ if "$planner" --plan 100000 90000 >/dev/null 2>&1; then
   exit 1
 fi
 
+p4_update_line="$(grep -n -- '-N 4' "$planner" | cut -d: -f1)"
+p3_update_line="$(grep -n -- '-N 3' "$planner" | cut -d: -f1)"
+if [[ -z "$p4_update_line" || -z "$p3_update_line" ||
+      "$p4_update_line" -ge "$p3_update_line" ]]; then
+  echo "Partition 4 must move before partition 3 grows" >&2
+  exit 1
+fi
+
 echo "equal remainder data layout: PASS"
