@@ -26,4 +26,4 @@ sudo mpi-mode-switch selector
 sudo mpi-mode-switch --set-default mixxx
 ```
 
-See `docs/plans/2026-07-21-systemd-modes.md` and `docs/hardware-test.md`.
+See `docs/hardware-test.md`.

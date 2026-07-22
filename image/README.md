@@ -37,4 +37,4 @@ The build must reconcile shared components touched by both provisioners,
 including PipeWire configuration, `99-mk3` udev rules, and the boot splash, so
 the last writer is intentional.
 
-See `docs/plans/2026-07-21-fused-image-build.md` and `docs/hardware-test.md`.
+See `docs/hardware-test.md`.
