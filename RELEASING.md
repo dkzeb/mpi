@@ -17,9 +17,10 @@ The component repos are:
 ## Versioning
 
 - **mpi-station** carries the release tag: `vMAJOR.MINOR.PATCH` (beta uses a
-  suffix, e.g. `v0.1.0-beta.1`).
+  suffix, e.g. `v0.9.0-beta.1`).
 - Component repos are tagged with their own version at the commit mpi-station
-  pins. The image filename is date-stamped: `mpi-station-YYYYMMDD.img.xz`.
+  pins. The release image is version-stamped:
+  `mpi-station-vMAJOR.MINOR.PATCH[-PRERELEASE].img.xz`.
 - A release is defined entirely by the submodule commit pins recorded in this
   repo at the tag. OTA advances the whole pinned set together.
 
@@ -71,7 +72,8 @@ The component repos are:
         --password '<release-password>' \
         --compress
       ```
-- [ ] Output lands in `image/output/mpi-station-YYYYMMDD.img.xz`.
+- [ ] Rename the verified output for the release, for example
+      `image/output/mpi-station-v0.9.0-beta.1.img.xz`.
 - [ ] Sanity-inspect it: `./image/inspect-image.sh image/output/<img>`.
 
 ## Phase 3 — Hardware validation gate
@@ -89,14 +91,14 @@ Do not proceed to publish if this gate fails.
 
 ## Phase 4 — Host the image and generate the os_list
 
-- [ ] Upload `mpi-station-YYYYMMDD.img.xz` to the download host (GitHub Releases
+- [ ] Upload `mpi-station-v0.9.0-beta.1.img.xz` to the download host (GitHub Releases
       if < 2 GB, else Cloudflare R2 or archive.org — see the README hosting
       notes).
 - [ ] Generate the release os_list + checksum:
       ```bash
       ./image/os-list/generate-os-list.sh \
-        --image image/output/mpi-station-YYYYMMDD.img.xz \
-        --url   https://<host>/mpi-station-YYYYMMDD.img.xz \
+        --image image/output/mpi-station-v0.9.0-beta.1.img.xz \
+        --url   https://<host>/mpi-station-v0.9.0-beta.1.img.xz \
         --date  YYYY-MM-DD \
         --output image/os-list/mpi-station.release.json
       ```
@@ -115,7 +117,7 @@ Do not proceed to publish if this gate fails.
       libmk3). Do this before publishing so the `icon.png` raw URL and
       cross-links resolve, and replace the "Links to be added on repo
       publication" placeholders with the now-live URLs.
-- [ ] Tag this repo: `git tag v0.1.0-beta.1 && git push origin v0.1.0-beta.1`.
+- [ ] Tag this repo: `git tag v0.9.0-beta.1 && git push origin v0.9.0-beta.1`.
 - [ ] Create the GitHub Release here, attaching (or linking) the image and the
       `.sha256`, and including the os_list URL and release notes.
 - [ ] Announce the Imager install path: **Choose OS → Use custom →** the

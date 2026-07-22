@@ -31,7 +31,7 @@ it to an SD card.
    [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (choose *Use
    custom image*), [balenaEtcher](https://etcher.balena.io/), or `dd`:
    ```bash
-   xz -dc mpi-station-YYYYMMDD.img.xz | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
+   xz -dc mpi-station-vVERSION.img.xz | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
    ```
    Replace `/dev/sdX` with your card — double-check it, `dd` is unforgiving.
 3. **Boot** the Pi with the MK3 connected. On first boot the image expands to
