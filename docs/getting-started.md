@@ -66,14 +66,14 @@ the password before putting the device on a network you don't trust.
 
 ## 4. Choose your mode
 
-**Hold Shift on the MK3 while the Pi boots** to pick a mode. Release when the
-selector appears, then choose:
+The mode selector appears automatically on the MK3 screens once the controller
+has attached. Choose:
 
 - **MusicPI** — make beats and arrangements.
 - **MixxxDJ** — mix and perform with tracks.
 
-To switch later: reboot and hold Shift again. The two modes are separate — only
-one runs at a time, so each gets the full machine.
+To switch later, reboot to return to the selector. The two modes are separate —
+only one runs at a time, so each gets the full machine.
 
 ## 5. First sounds
 
@@ -117,7 +117,7 @@ re-flash keeps your content — but back up anything important first.
 |---|---|
 | MK3 screens stay dark | Check the USB cable and that the MK3 has its own power; reboot with both connected. |
 | No sound | Confirm your output (headphones/speakers/USB interface) is connected before boot; check the volume. |
-| Mode selector doesn't appear | Hold **Shift** *during* boot, not after; try again from a full power cycle. |
+| Mode selector doesn't appear | Check that the MK3 has power and USB, then allow a moment for it to attach; try again from a full power cycle. |
 | Controller stops responding | Reboot. If it persists, note what you were doing and file an issue. |
 | First boot seems stuck | The one-time storage setup can take several minutes on large cards — give it time before power-cycling. |
 

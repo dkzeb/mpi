@@ -2,7 +2,7 @@
 
 This is **dkzeb/mpi**, the integrator / delivery repo for the MusicPI MK3
 dual-mode rig: one Raspberry Pi 4 + Native Instruments Maschine MK3 that boots
-into **either** the MusicPI DAW **or** MixxxDJ, chosen at boot by holding Shift.
+into **either** the MusicPI DAW **or** MixxxDJ, chosen from the MK3 boot selector.
 Start from the [README](README.md).
 
 ## What this repo does

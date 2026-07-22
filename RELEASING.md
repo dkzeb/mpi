@@ -80,8 +80,8 @@ Follow `docs/hardware-test.md` on a real Raspberry Pi 4 + MK3:
 
 - [ ] Fresh flash boots; first-boot data-partition split and sample restore
       complete.
-- [ ] **Hold Shift at boot** selects mode; both **MixxxDJ** and **MusicPI**
-      start and drive the MK3 (screens, pads, LEDs).
+- [ ] The boot selector appears after the MK3 attaches; both **MixxxDJ** and
+      **MusicPI** start and drive the MK3 (screens, pads, LEDs).
 - [ ] Switching modes and rebooting works.
 - [ ] Audio plays without xruns in a short soak on each mode.
 

@@ -6,8 +6,8 @@ mpi-station builds and ships a single flashable image that boots into either:
 - **MusicPI** — a headless Tracktion-based DAW / groovebox, or
 - **MixxxDJ** — Mixxx DJ software with full MK3 control,
 
-chosen at boot by holding **Shift** on the MK3 (or a keyboard). Switch modes,
-reboot, and the same hardware becomes a different instrument.
+chosen from a selector on the MK3 screens at boot. Switch modes, reboot, and
+the same hardware becomes a different instrument.
 
 > **About the name.** MusicPI began as *MaschinePI* — Maschine + Raspberry Pi —
 > born to unleash the Native Instruments Maschine MK3 beyond the software it
@@ -33,7 +33,8 @@ it to an SD card.
 3. **Boot** the Pi with the MK3 connected. On first boot the image expands to
    fill the card and provisions two data partitions (your Mixxx library and your
    MusicPI samples).
-4. **Pick a mode:** hold **Shift** during boot to choose MixxxDJ or MusicPI.
+4. **Pick a mode:** wait for the selector on the MK3 screens, then choose
+   MixxxDJ or MusicPI.
 
 ### First boot
 
