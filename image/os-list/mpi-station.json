@@ -3,7 +3,7 @@
     {
       "name": "MPI-Station (MK3 dual-mode)",
       "description": "MusicPI DAW + MixxxDJ for Raspberry Pi 4 with a Native Instruments Maschine MK3. Hold Shift at boot to choose mode.",
-      "website": "https://github.com/dkzeb/mpi-station",
+      "website": "https://github.com/dkzeb/mpi",
       "icon": "__ICON_URL__",
       "url": "__IMAGE_URL__",
       "release_date": "__RELEASE_DATE__",
